@@ -1,32 +1,10 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import type { JWT } from 'next-auth/jwt';
-
-// Extend the built-in types to include our custom fields
-declare module 'next-auth' {
-  interface User {
-    role?: string;
-    assignedProjectIds?: string[];
-  }
-
-  interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      role?: string;
-      assignedProjectIds?: string[];
-    };
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    role?: string;
-    assignedProjectIds?: string[];
-  }
-}
+import { compare } from 'bcryptjs';
+import { connectDB } from '@/lib/db/connection';
+import { UserModel, type IUser } from '@/lib/db/models';
+import type { Model } from 'mongoose';
+import '@/lib/auth/types';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -35,11 +13,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize() {
-        // Skeleton — will be implemented in Task 7 (Phase 1)
-        // Will: connect to DB, find user by email, verify password with bcryptjs,
-        // return user object with id, name, email, role, assignedProjectIds
-        return null;
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        await connectDB();
+
+        const User = UserModel as Model<IUser>;
+        const user = await User.findOne({
+          email: credentials.email as string,
+        }).lean();
+
+        if (!user) return null;
+
+        const isValid = await compare(
+          credentials.password as string,
+          (user as { passwordHash: string }).passwordHash,
+        );
+        if (!isValid) return null;
+
+        const doc = user as {
+          _id: { toString(): string };
+          name: string;
+          email: string;
+          role: 'admin' | 'sales_lead' | 'bda';
+          assignedProjectIds: { toString(): string }[];
+        };
+
+        return {
+          id: doc._id.toString(),
+          name: doc.name,
+          email: doc.email,
+          role: doc.role,
+          assignedProjectIds: doc.assignedProjectIds.map((id) => id.toString()),
+        };
       },
     }),
   ],
@@ -47,20 +53,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: { signIn: '/login' },
   callbacks: {
     async jwt({ token, user }) {
-      // When user signs in, attach role and project IDs to token
       if (user) {
+        token.id = user.id as string;
         token.role = user.role;
         token.assignedProjectIds = user.assignedProjectIds;
       }
       return token;
     },
     async session({ session, token }) {
-      // Expose role and project IDs on the session object
-      if (session.user) {
-        session.user.id = token.sub ?? '';
-        session.user.role = token.role;
-        session.user.assignedProjectIds = token.assignedProjectIds;
-      }
+      session.user.id = token.id;
+      session.user.role = token.role;
+      session.user.assignedProjectIds = token.assignedProjectIds;
       return session;
     },
   },

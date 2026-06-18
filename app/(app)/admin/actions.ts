@@ -169,7 +169,7 @@ export async function getScoringConfig(
     ? { projectId }
     : { projectId: { $exists: false } };
 
-  const config = await ScoringConfigModel.findOne(filter)
+  const config = await (ScoringConfigModel as any).findOne(filter)
     .sort({ version: -1 })
     .lean();
 
@@ -190,7 +190,7 @@ export async function getScoringConfigHistory(
     ? { projectId }
     : { projectId: { $exists: false } };
 
-  const configs = await ScoringConfigModel.find(filter)
+  const configs = await (ScoringConfigModel as any).find(filter)
     .sort({ version: -1 })
     .limit(20)
     .lean();
@@ -212,13 +212,13 @@ export async function updateScoringConfig(
     ? { projectId: parsed.projectId }
     : { projectId: { $exists: false } };
 
-  const current = await ScoringConfigModel.findOne(filter)
+  const current = await (ScoringConfigModel as any).findOne(filter)
     .sort({ version: -1 })
     .lean();
 
   const newVersion = (current?.version ?? 0) + 1;
 
-  await ScoringConfigModel.create({
+  await (ScoringConfigModel as any).create({
     ...parsed,
     version: newVersion,
     updatedBy: session.user.id,
@@ -245,7 +245,7 @@ export async function rescoreAllLeads(
   const configFilter = projectId
     ? { projectId }
     : { projectId: { $exists: false } };
-  const configDoc = await ScoringConfigModel.findOne(configFilter)
+  const configDoc = await (ScoringConfigModel as any).findOne(configFilter)
     .sort({ version: -1 })
     .lean();
 
@@ -262,7 +262,7 @@ export async function rescoreAllLeads(
   };
 
   const leadFilter = projectId ? { projectId } : {};
-  const leads = (await LeadModel.find(leadFilter).lean()) as ILead[];
+  const leads = (await (LeadModel as any).find(leadFilter).lean()) as ILead[];
 
   if (leads.length === 0) {
     return { rescored: 0 };
@@ -275,36 +275,19 @@ export async function rescoreAllLeads(
   for (let i = 0; i < leads.length; i += CHUNK_SIZE) {
     const chunk = leads.slice(i, i + CHUNK_SIZE);
 
-    const bulkLeadOps: Array<{
-      updateOne: {
-        filter: { _id: unknown };
-        update: { $set: Record<string, unknown> };
-      };
-    }> = [];
-    const snapshotsToInsert: Array<{
-      leadId: unknown;
-      fitScore: number;
-      intentScore: number;
-      band: string;
-      contributions: Array<{
-        signal: string;
-        category: string;
-        weight: number;
-        points: number;
-      }>;
-      computedAt: Date;
-    }> = [];
+    const bulkLeadOps: any[] = [];
+    const snapshotsToInsert: any[] = [];
 
     await Promise.all(
       chunk.map(async (lead) => {
         const leadId = lead._id;
 
         const [activities, signals] = await Promise.all([
-          ActivityModel.find({ leadId }).lean(),
-          ExtractedSignalModel.find({ leadId }).lean(),
+          (ActivityModel as any).find({ leadId }).lean(),
+          (ExtractedSignalModel as any).find({ leadId }).lean(),
         ]);
 
-        const masterclass = await MasterclassModel.findById(
+        const masterclass = await (MasterclassModel as any).findById(
           lead.masterclassId,
         ).lean();
 
@@ -322,13 +305,13 @@ export async function rescoreAllLeads(
             : undefined,
         };
 
-        const activityInputs: ActivityInput[] = activities.map((a) => ({
+        const activityInputs: ActivityInput[] = (activities as any[]).map((a: any) => ({
           type: a.type,
           numericValue: a.numericValue ?? undefined,
           occurredAt: new Date(a.occurredAt),
         }));
 
-        const signalInputs: SignalInput[] = signals.map((s) => ({
+        const signalInputs: SignalInput[] = (signals as any[]).map((s: any) => ({
           signalType: s.signalType,
           polarity: s.polarity,
           confidence: s.confidence,
@@ -369,10 +352,10 @@ export async function rescoreAllLeads(
     );
 
     if (bulkLeadOps.length > 0) {
-      await LeadModel.bulkWrite(bulkLeadOps);
+      await (LeadModel as any).bulkWrite(bulkLeadOps);
     }
     if (snapshotsToInsert.length > 0) {
-      await ScoreSnapshotModel.insertMany(snapshotsToInsert);
+      await (ScoreSnapshotModel as any).insertMany(snapshotsToInsert);
     }
 
     rescored += chunk.length;

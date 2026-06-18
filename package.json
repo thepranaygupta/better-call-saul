@@ -1,5 +1,5 @@
 {
-  "name": "platform",
+  "name": "saul",
   "version": "0.1.0",
   "private": true,
   "description": "Saul — lead-prioritization console for an edtech sales floor",
@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -44,6 +45,7 @@
     "eslint-config-next": "16.2.9",
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",
+    "tsx": "^4.22.4",
     "typescript": "^5.0.0"
   }
 }

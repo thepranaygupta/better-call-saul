@@ -1,0 +1,168 @@
+import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth/config';
+import { scopeLeadQueryToUser } from '@/lib/auth/rbac';
+import { connectDB } from '@/lib/db/connection';
+import {
+  LeadModel,
+  ExtractedSignalModel,
+  DispositionModel,
+  ScoreSnapshotModel,
+  MasterclassModel,
+  CallBriefModel,
+  type IExtractedSignal,
+  type IDisposition,
+  type IScoreSnapshot,
+} from '@/lib/db/models';
+import { generateBriefSchema } from '@/lib/validation/schemas';
+import { isAIAvailable, azureOpenAI } from '@/lib/ai/client';
+import { callBriefSchema } from '@/lib/ai/schemas';
+import { buildBriefSystemPrompt, buildBriefUserPrompt } from '@/lib/ai/prompts';
+
+export async function POST(request: Request) {
+  // --- Auth check ---
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // --- Parse + validate input ---
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const parsed = generateBriefSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Validation failed', issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  const { leadId, language } = parsed.data;
+
+  // --- AI availability check ---
+  if (!isAIAvailable()) {
+    return NextResponse.json(
+      { error: 'AI is not configured. Set Azure OpenAI environment variables.' },
+      { status: 503 },
+    );
+  }
+
+  await connectDB();
+
+  // --- RBAC: verify lead belongs to user's project scope ---
+  const scopedQuery = scopeLeadQueryToUser(session, { _id: leadId });
+  const lead = await LeadModel.findOne(scopedQuery as any).lean();
+  if (!lead) {
+    return NextResponse.json(
+      { error: 'Lead not found or access denied' },
+      { status: 404 },
+    );
+  }
+
+  // --- Cache check: return existing brief if available ---
+  const existingBrief = await CallBriefModel.findOne({
+    leadId,
+    language,
+  } as any)
+    .sort({ generatedAt: -1 })
+    .lean();
+
+  if (existingBrief) {
+    return NextResponse.json({
+      brief: {
+        summary: existingBrief.summary,
+        talkingPoints: existingBrief.talkingPoints,
+        likelyObjections: existingBrief.likelyObjections,
+        language: existingBrief.language,
+        generatedAt: existingBrief.generatedAt,
+        cached: true,
+      },
+    });
+  }
+
+  // --- Fetch context: signals, dispositions, snapshot, masterclass ---
+  const [signals, dispositions, snapshot, masterclass] = await Promise.all([
+    ExtractedSignalModel.find({ leadId } as any)
+      .lean()
+      .exec() as Promise<IExtractedSignal[]>,
+    DispositionModel.find({ leadId } as any)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec() as Promise<IDisposition[]>,
+    ScoreSnapshotModel.findOne({ leadId } as any)
+      .sort({ computedAt: -1 })
+      .lean()
+      .exec() as Promise<IScoreSnapshot | null>,
+    (MasterclassModel as any).findById(lead.masterclassId).lean().exec(),
+  ]);
+
+  // --- Build prompt context ---
+  const fitScore = snapshot?.fitScore ?? lead.fitScore ?? 0;
+  const intentScore = snapshot?.intentScore ?? lead.intentScore ?? 0;
+  const band = snapshot?.band ?? lead.band ?? 'cold';
+  const contributions = snapshot?.contributions?.map((c) => ({
+    signal: c.signal,
+    points: c.points,
+  })) ?? [];
+
+  const signalContext = signals.map((s) => ({
+    signalType: s.signalType,
+    evidenceQuote: s.evidenceQuote,
+  }));
+
+  const dispositionContext = dispositions.map((d) => ({
+    outcome: d.outcome,
+    notes: d.notes,
+  }));
+
+  const systemPrompt = buildBriefSystemPrompt(language);
+  const userPrompt = buildBriefUserPrompt({
+    leadName: lead.name,
+    fitScore,
+    intentScore,
+    band,
+    contributions,
+    signals: signalContext,
+    dispositions: dispositionContext,
+    masterclassTitle: masterclass?.title ?? 'Unknown masterclass',
+    offerPriceINR: masterclass?.offerPriceINR ?? 0,
+  });
+
+  // --- Call Azure OpenAI ---
+  try {
+    const result = await azureOpenAI(systemPrompt, userPrompt, callBriefSchema);
+
+    // --- Persist to CallBriefModel ---
+    const deployment = process.env.AZURE_OPENAI_DEPLOYMENT ?? 'unknown';
+    await CallBriefModel.create({
+      leadId,
+      language,
+      summary: result.summary,
+      talkingPoints: result.talkingPoints,
+      likelyObjections: result.likelyObjections,
+      modelUsed: deployment,
+      generatedAt: new Date(),
+    });
+
+    return NextResponse.json({
+      brief: {
+        summary: result.summary,
+        talkingPoints: result.talkingPoints,
+        likelyObjections: result.likelyObjections,
+        language,
+        generatedAt: new Date().toISOString(),
+        cached: false,
+      },
+    });
+  } catch (err) {
+    console.error('[/api/ai/brief] AI generation failed:', err);
+    return NextResponse.json(
+      { error: 'Failed to generate call brief. Please try again.' },
+      { status: 500 },
+    );
+  }
+}

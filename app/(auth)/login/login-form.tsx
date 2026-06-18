@@ -12,15 +12,15 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-[340px]">
       <div className="mb-6">
-        <h1 className="text-[20px] font-semibold tracking-tight text-[#18181B]">
+        <h1 className="text-[20px] font-semibold tracking-tight text-stone-950">
           Saul
         </h1>
-        <p className="mt-1 text-[13px] text-[#71717A]">
+        <p className="mt-1 text-[13px] text-stone-500">
           Sign in to access the lead queue.
         </p>
       </div>
 
-      <div className="border border-[#E4E4E7] bg-white p-5">
+      <div className="border border-stone-200 bg-white p-5">
         <form action={formAction} className="flex flex-col gap-4">
           {state?.error && (
             <div
@@ -34,7 +34,7 @@ export function LoginForm() {
           <div className="flex flex-col gap-1.5">
             <Label
               htmlFor="email"
-              className="text-[12px] font-medium text-[#71717A]"
+              className="text-[12px] font-medium uppercase tracking-widest text-stone-500"
             >
               Email
             </Label>
@@ -46,14 +46,14 @@ export function LoginForm() {
               required
               autoComplete="email"
               autoFocus
-              className="h-9 rounded-none border-[#E4E4E7] text-[13px] focus-visible:ring-[#18181B]"
+              className="h-9 rounded-none border-stone-200 text-[13px] focus-visible:ring-amber-700"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label
               htmlFor="password"
-              className="text-[12px] font-medium text-[#71717A]"
+              className="text-[12px] font-medium uppercase tracking-widest text-stone-500"
             >
               Password
             </Label>
@@ -63,16 +63,16 @@ export function LoginForm() {
               type="password"
               required
               autoComplete="current-password"
-              className="h-9 rounded-none border-[#E4E4E7] text-[13px] focus-visible:ring-[#18181B]"
+              className="h-9 rounded-none border-stone-200 text-[13px] focus-visible:ring-amber-700"
             />
           </div>
 
           <Button
             type="submit"
-            className="mt-1 h-9 w-full rounded-none bg-[#18181B] text-[13px] font-medium text-white hover:bg-[#27272A]"
+            className="mt-1 h-9 w-full rounded-none bg-amber-700 text-[13px] font-medium text-white hover:bg-amber-800"
             disabled={isPending}
           >
-            {isPending ? 'Signing in…' : 'Sign in'}
+            {isPending ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
       </div>

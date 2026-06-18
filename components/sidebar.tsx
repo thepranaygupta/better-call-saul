@@ -57,8 +57,8 @@ function NavContent({
     <div className="flex h-full flex-col">
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <PhoneCallIcon className="size-5 text-primary" />
-        <span className="text-lg font-semibold tracking-tight">Saul</span>
+        <PhoneCallIcon className="size-5 text-amber-700" />
+        <span className="text-lg font-semibold tracking-tight text-stone-950">Saul</span>
       </div>
 
       <Separator />
@@ -72,10 +72,10 @@ function NavContent({
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ? 'bg-amber-700 text-white'
+                  : 'text-stone-500 hover:bg-stone-100 hover:text-stone-950',
               )}
             >
               <item.icon className="size-4" />
@@ -90,13 +90,13 @@ function NavContent({
       {/* User info + sign out */}
       <div className="flex items-center gap-3 p-4">
         <Avatar size="sm">
-          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+          <AvatarFallback className="bg-amber-100 text-amber-800">{getInitials(user.name)}</AvatarFallback>
         </Avatar>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium">
+          <span className="truncate text-sm font-medium text-stone-950">
             {user.name ?? 'User'}
           </span>
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="truncate text-xs uppercase tracking-widest text-stone-500">
             {user.role ?? 'bda'}
           </span>
         </div>
@@ -142,8 +142,8 @@ export function Sidebar({ user }: SidebarProps) {
             <NavContent user={user} pathname={pathname} />
           </SheetContent>
         </Sheet>
-        <PhoneCallIcon className="size-4 text-primary" />
-        <span className="text-sm font-semibold">Saul</span>
+        <PhoneCallIcon className="size-4 text-amber-700" />
+        <span className="text-sm font-semibold text-stone-950">Saul</span>
       </div>
     </>
   );

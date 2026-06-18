@@ -12,6 +12,13 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { BandBadge, BAND_BORDER_COLORS, type Band } from '@/components/band-badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -22,6 +29,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ChevronsUpDownIcon,
+  PhoneIcon,
 } from 'lucide-react';
 import type { QueueData, QueueLead } from '@/app/(app)/queue/actions';
 
@@ -68,6 +76,12 @@ const ACTIVITY_LABELS: Record<string, string> = {
   older: 'Older',
 };
 
+const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
+  enrolled: { label: 'Enrolled', color: 'text-teal-700' },
+  not_enrolled: { label: 'Lost', color: 'text-stone-400' },
+  undecided: { label: 'Open', color: 'text-amber-600' },
+};
+
 /** Band sort priority for TanStack custom sort */
 const BAND_ORDER: Record<string, number> = {
   call_now: 0,
@@ -78,7 +92,7 @@ const BAND_ORDER: Record<string, number> = {
 };
 
 // ---------------------------------------------------------------------------
-// Intent score cell — monospace, prominent, color-coded
+// Intent score cell -- monospace, prominent, color-coded
 // ---------------------------------------------------------------------------
 
 function intentScoreColor(score: number): string {
@@ -91,7 +105,7 @@ function IntentScoreCell({ score }: { score: number }) {
   return (
     <span
       className={cn(
-        'font-mono text-sm font-semibold tabular-nums',
+        'font-mono text-[13px] font-semibold tabular-nums',
         intentScoreColor(score),
       )}
     >
@@ -115,7 +129,7 @@ function SortIndicator({ sorted }: { sorted: false | 'asc' | 'desc' }) {
 }
 
 // ---------------------------------------------------------------------------
-// Debounced search — uses key-reset pattern to sync with URL
+// Debounced search -- uses key-reset pattern to sync with URL
 // ---------------------------------------------------------------------------
 
 function DebouncedSearchInput({
@@ -155,12 +169,17 @@ function DebouncedSearchInput({
         placeholder="Search name, email, phone..."
         value={value}
         onChange={handleChange}
-        className="h-7 w-full rounded-full border border-stone-200 bg-white pl-8 pr-7 text-[11px] text-stone-950 placeholder:text-stone-400 outline-none transition-colors focus:border-amber-700/40 focus:ring-1 focus:ring-amber-700/20 sm:w-[220px]"
+        className={cn(
+          'h-7 w-full border border-stone-200 bg-white pl-8 pr-7 text-[11px] text-stone-950',
+          'placeholder:text-stone-400 outline-none transition-colors',
+          'focus:border-amber-700/40 focus:ring-1 focus:ring-amber-700/20',
+          'sm:w-[200px]',
+        )}
       />
       {value.length > 0 && (
         <button
           onClick={handleClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-stone-400 hover:text-stone-600"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600"
           aria-label="Clear search"
         >
           <XIcon className="size-3" />
@@ -171,91 +190,103 @@ function DebouncedSearchInput({
 }
 
 // ---------------------------------------------------------------------------
-// Filter chip — pill-style native select
+// Filter pill -- uses shadcn Select (base-ui), styled as compact pill
 // ---------------------------------------------------------------------------
 
-interface FilterChipProps {
+interface FilterPillProps {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
 }
 
-function FilterChip({ label, value, options, onChange }: FilterChipProps) {
+function FilterPill({ label, value, options, onChange }: FilterPillProps) {
   const isActive = value !== 'all';
+  const selectedLabel = isActive
+    ? options.find((o) => o.value === value)?.label ?? label
+    : label;
 
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+    <Select value={value} onValueChange={(v) => onChange(v ?? 'all')}>
+      <SelectTrigger
+        size="sm"
         className={cn(
-          'h-7 cursor-pointer appearance-none rounded-full border px-3 pr-6 text-[11px] font-medium uppercase tracking-wide outline-none transition-colors',
+          'h-7 gap-1 rounded-full border px-2.5 text-[11px] font-medium uppercase tracking-wide',
+          '[&_svg]:size-3',
           isActive
-            ? 'border-amber-700/30 bg-amber-50 text-amber-800'
+            ? 'border-amber-700/30 bg-amber-50 text-amber-800 hover:bg-amber-100/60'
             : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:text-stone-700',
         )}
-        aria-label={`Filter by ${label}`}
       >
-        <option value="all">{label}</option>
+        <SelectValue>{selectedLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent align="start" sideOffset={4}>
+        <SelectItem value="all" className="text-xs">
+          All {label}s
+        </SelectItem>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value} value={opt.value} className="text-xs">
             {opt.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
-      <svg
-        className={cn(
-          'pointer-events-none absolute right-2 top-1/2 size-2.5 -translate-y-1/2',
-          isActive ? 'text-amber-700' : 'text-stone-400',
-        )}
-        viewBox="0 0 10 6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M1 1l4 4 4-4" />
-      </svg>
-    </div>
+      </SelectContent>
+    </Select>
   );
 }
 
 // ---------------------------------------------------------------------------
-// TanStack column definitions
+// TanStack column definitions -- dense, CRM-style
 // ---------------------------------------------------------------------------
 
-function createColumns(): ColumnDef<QueueLead>[] {
-  return [
+function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
+  const cols: ColumnDef<QueueLead>[] = [
     {
       accessorKey: 'name',
       header: 'Lead',
       enableSorting: true,
+      size: 200,
       cell: ({ row }) => (
         <Link
           href={`/leads/${row.original._id}`}
-          className="group flex flex-col"
+          className="group flex flex-col gap-0"
         >
           <span className="text-[13px] font-medium text-stone-950 group-hover:text-amber-700">
             {row.original.name}
           </span>
-          <span className="text-[11px] text-stone-500">
+          <span className="text-[11px] leading-tight text-stone-400">
             {row.original.email}
           </span>
         </Link>
       ),
     },
     {
+      accessorKey: 'phone',
+      header: 'Phone',
+      enableSorting: false,
+      size: 120,
+      cell: ({ row }) => (
+        <a
+          href={`tel:${row.original.phone}`}
+          className="inline-flex items-center gap-1 text-xs tabular-nums text-stone-600 hover:text-amber-700"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <PhoneIcon className="size-3 text-stone-400" />
+          {row.original.phone}
+        </a>
+      ),
+    },
+    {
       accessorKey: 'intentScore',
       header: 'Intent',
       enableSorting: true,
+      size: 60,
       cell: ({ row }) => <IntentScoreCell score={row.original.intentScore} />,
     },
     {
       accessorKey: 'band',
       header: 'Band',
       enableSorting: true,
+      size: 100,
       sortingFn: (rowA, rowB) => {
         const a = BAND_ORDER[rowA.original.band] ?? 4;
         const b = BAND_ORDER[rowB.original.band] ?? 4;
@@ -264,9 +295,30 @@ function createColumns(): ColumnDef<QueueLead>[] {
       cell: ({ row }) => <BandBadge band={row.original.band as Band} />,
     },
     {
+      accessorKey: 'projectName',
+      header: 'Project',
+      enableSorting: true,
+      size: 120,
+      cell: ({ row }) => (
+        <span className="text-xs text-stone-600">{row.original.projectName}</span>
+      ),
+    },
+    {
+      accessorKey: 'city',
+      header: 'City',
+      enableSorting: true,
+      size: 100,
+      cell: ({ row }) => (
+        <span className="text-xs text-stone-500">
+          {row.original.city ?? '--'}
+        </span>
+      ),
+    },
+    {
       accessorKey: 'sourceChannel',
       header: 'Source',
       enableSorting: true,
+      size: 90,
       cell: ({ row }) => (
         <span className="text-xs text-stone-500">
           {SOURCE_LABELS[row.original.sourceChannel] ?? row.original.sourceChannel}
@@ -274,9 +326,24 @@ function createColumns(): ColumnDef<QueueLead>[] {
       ),
     },
     {
+      accessorKey: 'outcome',
+      header: 'Outcome',
+      enableSorting: true,
+      size: 80,
+      cell: ({ row }) => {
+        const cfg = OUTCOME_CONFIG[row.original.outcome] ?? { label: 'Open', color: 'text-amber-600' };
+        return (
+          <span className={cn('text-xs font-medium', cfg.color)}>
+            {cfg.label}
+          </span>
+        );
+      },
+    },
+    {
       accessorKey: 'lastActivityAt',
       header: 'Last Activity',
       enableSorting: true,
+      size: 100,
       sortingFn: (rowA, rowB) => {
         const a = rowA.original.lastActivityAt
           ? new Date(rowA.original.lastActivityAt).getTime()
@@ -287,12 +354,29 @@ function createColumns(): ColumnDef<QueueLead>[] {
         return a - b;
       },
       cell: ({ row }) => (
-        <span className="text-xs tabular-nums text-stone-500">
+        <span className="text-xs tabular-nums text-stone-400">
           {timeAgo(row.original.lastActivityAt)}
         </span>
       ),
     },
   ];
+
+  // Insert owner column before Last Activity if admin/sales_lead
+  if (showOwner) {
+    cols.splice(cols.length - 1, 0, {
+      accessorKey: 'assignedBdaName',
+      header: 'Owner',
+      enableSorting: true,
+      size: 110,
+      cell: ({ row }) => (
+        <span className="text-xs text-stone-500">
+          {row.original.assignedBdaName ?? '--'}
+        </span>
+      ),
+    });
+  }
+
+  return cols;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,10 +400,13 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
   const currentActivity = searchParams.get('activity') ?? 'all';
   const currentSearch = searchParams.get('search') ?? '';
 
+  const showOwnerFilter =
+    data.currentUserRole === 'admin' || data.currentUserRole === 'sales_lead';
+
   // TanStack table sorting (client-side within the current page)
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const columns = useMemo(() => createColumns(), []);
+  const columns = useMemo(() => createColumns(showOwnerFilter), [showOwnerFilter]);
 
   const table = useReactTable({
     data: data.leads,
@@ -376,10 +463,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
     });
   };
 
-  const showOwnerFilter =
-    data.currentUserRole === 'admin' || data.currentUserRole === 'sales_lead';
-
-  // Build filter options — names, not IDs
+  // Build filter options -- names, not IDs
   const projectOptions = data.projects.map((p) => ({ value: p._id, label: p.name }));
   const bandOptions = Object.entries(BAND_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const sourceOptions = Object.entries(SOURCE_LABELS).map(([v, l]) => ({ value: v, label: l }));
@@ -390,73 +474,81 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
   }));
 
   return (
-    <div className="space-y-3">
-      {/* ── Status bar: count + active filters ────────────── */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-2">
+      {/* ── Filter toolbar ────────────────────────────────── */}
+      <div className="flex flex-col gap-2 border-b border-stone-200 pb-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <DebouncedSearchInput
+            key={currentSearch}
+            defaultValue={currentSearch}
+            onSearch={handleSearch}
+          />
+
+          <div className="mx-0.5 hidden h-4 w-px bg-stone-200 sm:block" />
+
+          <FilterPill
+            label="Project"
+            value={currentProject}
+            options={projectOptions}
+            onChange={handleFilterChange('project')}
+          />
+          <FilterPill
+            label="Band"
+            value={currentBand}
+            options={bandOptions}
+            onChange={handleFilterChange('band')}
+          />
+          <FilterPill
+            label="Source"
+            value={currentSource}
+            options={sourceOptions}
+            onChange={handleFilterChange('source')}
+          />
+          {showOwnerFilter && (
+            <FilterPill
+              label="Owner"
+              value={currentOwner}
+              options={ownerOptions}
+              onChange={handleFilterChange('owner')}
+            />
+          )}
+          <FilterPill
+            label="Activity"
+            value={currentActivity}
+            options={activityOptions}
+            onChange={handleFilterChange('activity')}
+          />
+
+          {activeFilterCount > 0 && (
+            <>
+              <div className="mx-0.5 hidden h-4 w-px bg-stone-200 sm:block" />
+              <button
+                onClick={clearAllFilters}
+                className="flex h-7 items-center gap-1 px-2 text-[11px] font-medium text-amber-700 transition-colors hover:text-amber-800"
+              >
+                <XIcon className="size-3" />
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Status line */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium tabular-nums text-stone-500">
+          <span className="text-[11px] font-medium tabular-nums text-stone-400">
             {data.totalCount} lead{data.totalCount !== 1 ? 's' : ''}
           </span>
           {activeFilterCount > 0 && (
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">
-              {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} active
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-700/70">
+              {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}
             </span>
           )}
         </div>
-        {activeFilterCount > 0 && (
-          <button
-            onClick={clearAllFilters}
-            className="text-[11px] font-medium text-amber-700 hover:text-amber-800"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
-
-      {/* ── Filter toolbar ────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DebouncedSearchInput
-          key={currentSearch}
-          defaultValue={currentSearch}
-          onSearch={handleSearch}
-        />
-        <FilterChip
-          label="Project"
-          value={currentProject}
-          options={projectOptions}
-          onChange={handleFilterChange('project')}
-        />
-        <FilterChip
-          label="Band"
-          value={currentBand}
-          options={bandOptions}
-          onChange={handleFilterChange('band')}
-        />
-        <FilterChip
-          label="Source"
-          value={currentSource}
-          options={sourceOptions}
-          onChange={handleFilterChange('source')}
-        />
-        {showOwnerFilter && (
-          <FilterChip
-            label="Owner"
-            value={currentOwner}
-            options={ownerOptions}
-            onChange={handleFilterChange('owner')}
-          />
-        )}
-        <FilterChip
-          label="Activity"
-          value={currentActivity}
-          options={activityOptions}
-          onChange={handleFilterChange('activity')}
-        />
       </div>
 
       {/* ── Empty state ───────────────────────────────────── */}
       {data.leads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center border border-dashed border-stone-300 bg-stone-50 py-16">
+        <div className="flex flex-col items-center justify-center border border-dashed border-stone-300 py-20">
           <p className="text-sm font-medium text-stone-950">
             {activeFilterCount > 0 ? 'No leads match filters' : 'No leads assigned'}
           </p>
@@ -476,7 +568,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
         </div>
       ) : (
         <>
-          {/* ── Desktop: TanStack sortable data table ─────── */}
+          {/* ── Desktop: TanStack dense data table ────────── */}
           <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
@@ -493,16 +585,19 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                           <th
                             key={header.id}
                             className={cn(
-                              'h-8 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-500 select-none',
+                              'h-8 px-2 text-[10px] font-semibold uppercase tracking-widest text-stone-500 select-none',
                               isRightAligned ? 'text-right' : 'text-left',
                               header.column.getCanSort() &&
                                 'cursor-pointer hover:text-stone-700',
                             )}
+                            style={{
+                              width: header.getSize() !== 150 ? header.getSize() : undefined,
+                            }}
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             <span
                               className={cn(
-                                'inline-flex items-center',
+                                'inline-flex items-center whitespace-nowrap',
                                 isRightAligned && 'justify-end',
                               )}
                             >
@@ -527,7 +622,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                     <tr
                       key={row.id}
                       className={cn(
-                        'h-[52px] border-b border-stone-200 border-l-4 transition-colors hover:bg-stone-100',
+                        'h-[44px] border-b border-stone-100 border-l-4 transition-colors hover:bg-stone-100',
                         BAND_BORDER_COLORS[row.original.band as Band],
                         row.original.band === 'disqualified' && 'opacity-50',
                       )}
@@ -536,7 +631,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                         <td
                           key={cell.id}
                           className={cn(
-                            'px-3',
+                            'px-2',
                             (cell.column.id === 'intentScore' ||
                               cell.column.id === 'lastActivityAt') &&
                               'text-right',
@@ -562,13 +657,13 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                 key={row.id}
                 href={`/leads/${row.original._id}`}
                 className={cn(
-                  'flex items-center justify-between border-b border-stone-200 border-l-4 px-3 py-2.5 transition-colors hover:bg-stone-100',
+                  'flex items-center justify-between border-b border-stone-100 border-l-4 px-3 py-2 transition-colors hover:bg-stone-100',
                   BAND_BORDER_COLORS[row.original.band as Band],
                   row.original.band === 'disqualified' && 'opacity-50',
                 )}
               >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[13px] font-medium text-stone-950">
+                <div className="flex flex-col gap-0.5 overflow-hidden">
+                  <span className="truncate text-[13px] font-medium text-stone-950">
                     {row.original.name}
                   </span>
                   <div className="flex items-center gap-2">
@@ -577,11 +672,23 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                       {row.original.projectName}
                     </span>
                   </div>
+                  <span className="text-[11px] text-stone-400">
+                    {row.original.phone}
+                    {row.original.city ? ` / ${row.original.city}` : ''}
+                  </span>
                 </div>
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pl-3">
                   <IntentScoreCell score={row.original.intentScore} />
                   <span className="text-[10px] tabular-nums text-stone-400">
                     {timeAgo(row.original.lastActivityAt)}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-medium',
+                      OUTCOME_CONFIG[row.original.outcome]?.color ?? 'text-stone-400',
+                    )}
+                  >
+                    {OUTCOME_CONFIG[row.original.outcome]?.label ?? 'Open'}
                   </span>
                 </div>
               </Link>
@@ -592,8 +699,8 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
 
       {/* ── Pagination ────────────────────────────────────── */}
       {data.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-stone-200 pt-3">
-          <span className="text-[11px] tabular-nums text-stone-500">
+        <div className="flex items-center justify-between border-t border-stone-200 pt-2">
+          <span className="text-[11px] tabular-nums text-stone-400">
             Page {data.page} of {data.totalPages}
           </span>
           <div className="flex items-center gap-1">

@@ -36,9 +36,13 @@ export interface QueueLead {
   projectName: string;
   sourceChannel: string;
   assignedBdaId: string | null;
+  assignedBdaName: string | null;
   lastActivityAt: string | null;
   registeredAt: string;
   outcome: 'enrolled' | 'not_enrolled' | 'undecided';
+  city: string | null;
+  occupationType: 'working_professional' | 'student' | 'other';
+  jobTitle: string | null;
 }
 
 export interface QueueBda {
@@ -202,6 +206,18 @@ export async function fetchQueueData(
     projects.map((p) => [String(p._id), p.name]),
   );
 
+  // Get assigned BDA names for the leads on this page
+  const bdaIds = [...new Set(pageLeads.map((l) => l.assignedBdaId).filter(Boolean))];
+  const bdaUsers = bdaIds.length > 0
+    ? await UserModel.find({ _id: { $in: bdaIds } } as any)
+        .select('_id name')
+        .lean()
+        .exec()
+    : [];
+  const bdaNameMap = new Map(
+    bdaUsers.map((u: { _id: unknown; name: string }) => [String(u._id), u.name]),
+  );
+
   // Get last activity timestamp for each lead on this page
   const leadIds = pageLeads.map((l) => l._id);
   const lastActivities = await ActivityModel.aggregate([
@@ -258,9 +274,15 @@ export async function fetchQueueData(
       projectName: projectMap.get(String(lead.projectId)) ?? 'Unknown',
       sourceChannel: lead.sourceChannel ?? 'other',
       assignedBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
+      assignedBdaName: lead.assignedBdaId
+        ? bdaNameMap.get(String(lead.assignedBdaId)) ?? null
+        : null,
       lastActivityAt: activityMap.get(String(lead._id))?.toISOString() ?? null,
       registeredAt: lead.registeredAt?.toISOString() ?? new Date().toISOString(),
       outcome: lead.outcome ?? 'undecided',
+      city: lead.city ?? null,
+      occupationType: lead.occupationType ?? 'other',
+      jobTitle: lead.jobTitle ?? null,
     })),
     projects: allProjects.map((p) => ({
       _id: String(p._id),

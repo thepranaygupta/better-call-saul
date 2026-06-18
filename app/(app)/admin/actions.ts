@@ -27,6 +27,7 @@ import type {
 } from '@/lib/scoring';
 import { hash } from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/audit';
 
 // --- Serialized types for client consumption ---
 
@@ -110,7 +111,7 @@ export async function getUsers(): Promise<SerializedUser[]> {
 export async function createUser(
   data: unknown,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireRole('admin');
+  const session = await requireRole('admin');
 
   const parsed = createUserSchema.safeParse(data);
   if (!parsed.success) {
@@ -126,12 +127,17 @@ export async function createUser(
   }
 
   const passwordHash = await hash(parsed.data.password, 12);
-  await (UserModel as any).create({
+  const newUser = await (UserModel as any).create({
     name: parsed.data.name,
     email: parsed.data.email,
     passwordHash,
     role: parsed.data.role,
     assignedProjectIds: parsed.data.assignedProjectIds,
+  });
+
+  await logAudit(session.user.id, 'create_user', 'user', String(newUser._id), {
+    email: parsed.data.email,
+    role: parsed.data.role,
   });
 
   revalidatePath('/admin');
@@ -218,12 +224,20 @@ export async function updateScoringConfig(
 
   const newVersion = (current?.version ?? 0) + 1;
 
-  await (ScoringConfigModel as any).create({
+  const newConfig = await (ScoringConfigModel as any).create({
     ...parsed,
     version: newVersion,
     updatedBy: session.user.id,
     updatedAt: new Date(),
   });
+
+  await logAudit(
+    session.user.id,
+    'update_scoring_config',
+    'scoring_config',
+    String(newConfig._id),
+    { version: newVersion },
+  );
 
   revalidatePath('/admin/scoring');
   return { version: newVersion };

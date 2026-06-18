@@ -19,6 +19,7 @@ import {
 import { requireAuth, scopeLeadQueryToUser } from '@/lib/auth/rbac';
 import { createDispositionSchema } from '@/lib/validation/schemas';
 import { scoreLead, DEFAULT_SCORING_CONFIG } from '@/lib/scoring';
+import { logAudit } from '@/lib/audit';
 import type {
   Contribution,
   ActivityType,
@@ -107,6 +108,9 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
   if (!lead) throw new Error('Lead not found or access denied');
 
   const leadIdStr = String(lead._id);
+
+  // Fire-and-forget: don't slow down the read path
+  void logAudit(session.user.id, 'view_lead', 'lead', leadIdStr);
 
   const [activities, signals, dispositions, masterclass, project] =
     await Promise.all([
@@ -321,6 +325,10 @@ export async function logDisposition(
       outcome: 'not_enrolled',
     });
   }
+
+  await logAudit(session.user.id, 'log_disposition', 'lead', parsed.leadId, {
+    outcome: parsed.outcome,
+  });
 
   revalidatePath(`/leads/${parsed.leadId}`);
 

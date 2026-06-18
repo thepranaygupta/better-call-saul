@@ -169,6 +169,8 @@ export function MessageDraftPanel({ leadId }: MessageDraftPanelProps) {
                         setError(null);
                       }
                     }}
+                    aria-label={`Language: ${label}`}
+                    aria-pressed={language === key}
                     className={`px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
                       language === key
                         ? 'bg-amber-700 text-white'

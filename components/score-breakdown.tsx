@@ -202,10 +202,10 @@ export function ScoreBreakdown({
 
       <div className="p-4">
         {/* Top section: quadrant dot + scores + band */}
-        <div className="flex items-start gap-4">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <QuadrantDot fitScore={fitScore} intentScore={intentScore} band={band} />
 
-          <div className="flex flex-1 flex-col gap-3">
+          <div className="flex w-full flex-1 flex-col gap-3">
             <div className="flex items-center gap-2">
               <BandBadge band={band as Band} />
               {band === 'disqualified' && (

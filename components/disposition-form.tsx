@@ -86,11 +86,11 @@ export function DispositionForm({ leadId, onDispositionLogged }: DispositionForm
       <div className="space-y-3 p-4">
         {/* Outcome select */}
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+          <Label htmlFor="disposition-outcome" className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
             OUTCOME
           </Label>
           <Select value={outcome} onValueChange={(v) => setOutcome(v ?? '')}>
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger id="disposition-outcome" className="h-8 text-xs">
               <SelectValue placeholder="Select outcome" />
             </SelectTrigger>
             <SelectContent>
@@ -105,10 +105,11 @@ export function DispositionForm({ leadId, onDispositionLogged }: DispositionForm
 
         {/* Notes */}
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+          <Label htmlFor="disposition-notes" className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
             NOTES
           </Label>
           <Textarea
+            id="disposition-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Call notes (optional)"
@@ -120,10 +121,11 @@ export function DispositionForm({ leadId, onDispositionLogged }: DispositionForm
         {/* Next action — only show for callback_scheduled */}
         {outcome === 'callback_scheduled' && (
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+            <Label htmlFor="disposition-callback" className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
               CALLBACK DATE
             </Label>
             <Input
+              id="disposition-callback"
               type="datetime-local"
               value={nextActionAt}
               onChange={(e) => setNextActionAt(e.target.value)}

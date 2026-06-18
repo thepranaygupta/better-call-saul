@@ -475,14 +475,15 @@ export function ScoringConfigEditor({
         <button
           type="button"
           onClick={() => setHistoryExpanded(!historyExpanded)}
+          aria-expanded={historyExpanded}
           className="flex w-full items-center gap-2 p-4 text-left hover:bg-stone-50"
         >
           {historyExpanded ? (
-            <ChevronDownIcon className="size-4 text-stone-500" />
+            <ChevronDownIcon className="size-4 text-stone-500" aria-hidden="true" />
           ) : (
-            <ChevronRightIcon className="size-4 text-stone-500" />
+            <ChevronRightIcon className="size-4 text-stone-500" aria-hidden="true" />
           )}
-          <HistoryIcon className="size-4 text-stone-500" />
+          <HistoryIcon className="size-4 text-stone-500" aria-hidden="true" />
           <h3 className="text-xs font-medium uppercase tracking-widest text-stone-500">
             Version History
           </h3>
@@ -565,12 +566,13 @@ function WeightSection({
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={expanded}
         className="flex w-full items-center gap-2 p-4 text-left hover:bg-stone-50"
       >
         {expanded ? (
-          <ChevronDownIcon className="size-4 text-stone-500" />
+          <ChevronDownIcon className="size-4 text-stone-500" aria-hidden="true" />
         ) : (
-          <ChevronRightIcon className="size-4 text-stone-500" />
+          <ChevronRightIcon className="size-4 text-stone-500" aria-hidden="true" />
         )}
         <div>
           <h3 className="text-xs font-medium uppercase tracking-widest text-stone-500">
@@ -605,8 +607,8 @@ function WeightInput({
         <Label className="text-[13px] text-stone-700">{label}</Label>
         {tooltip && (
           <span className="relative">
-            <InfoIcon className="size-3 cursor-help text-stone-400" />
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-56 -translate-x-1/2 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs text-stone-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+            <InfoIcon className="size-3 cursor-help text-stone-400" aria-hidden="true" />
+            <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-56 -translate-x-1/2 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs text-stone-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
               {tooltip}
             </span>
           </span>
@@ -616,6 +618,7 @@ function WeightInput({
         type="number"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={`Weight for ${label}`}
         className={`w-20 text-right font-mono text-sm ${
           isNegative
             ? 'border-red-200 text-red-700'
@@ -652,6 +655,7 @@ function StatusMessage({
       <button
         type="button"
         onClick={onDismiss}
+        aria-label="Dismiss message"
         className="text-xs opacity-50 hover:opacity-100"
       >
         Dismiss

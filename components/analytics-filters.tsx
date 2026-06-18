@@ -47,16 +47,16 @@ export function AnalyticsFilters({ projects, sources }: AnalyticsFiltersProps) {
   );
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-widest text-stone-400">
+        <label htmlFor="analytics-project-filter" className="text-[11px] font-medium uppercase tracking-widest text-stone-400">
           Project
-        </span>
+        </label>
         <Select
           value={currentProject}
           onValueChange={(v: string | null) => updateFilter('project', v ?? 'all')}
         >
-          <SelectTrigger className="h-7 w-[160px] border-stone-200 bg-white text-[13px] text-stone-950">
+          <SelectTrigger id="analytics-project-filter" className="h-7 w-[160px] border-stone-200 bg-white text-[13px] text-stone-950">
             <SelectValue placeholder="All projects" />
           </SelectTrigger>
           <SelectContent>
@@ -71,14 +71,14 @@ export function AnalyticsFilters({ projects, sources }: AnalyticsFiltersProps) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-widest text-stone-400">
+        <label htmlFor="analytics-source-filter" className="text-[11px] font-medium uppercase tracking-widest text-stone-400">
           Source
-        </span>
+        </label>
         <Select
           value={currentSource}
           onValueChange={(v: string | null) => updateFilter('source', v ?? 'all')}
         >
-          <SelectTrigger className="h-7 w-[160px] border-stone-200 bg-white text-[13px] text-stone-950">
+          <SelectTrigger id="analytics-source-filter" className="h-7 w-[160px] border-stone-200 bg-white text-[13px] text-stone-950">
             <SelectValue placeholder="All sources" />
           </SelectTrigger>
           <SelectContent>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth/config';
 import { Sidebar } from '@/components/sidebar';
+import { Footer } from '@/components/footer';
 
 export default async function AppLayout({
   children,
@@ -22,7 +23,10 @@ export default async function AppLayout({
   return (
     <div className="flex h-screen flex-col md:flex-row">
       <Sidebar user={user} />
-      <main className="flex-1 overflow-y-auto bg-[#F5F5F0] p-4 md:p-6">{children}</main>
+      <div className="flex flex-1 flex-col overflow-y-auto bg-[#F5F5F0]">
+        <main className="flex-1 p-4 md:p-6" role="main">{children}</main>
+        <Footer />
+      </div>
     </div>
   );
 }

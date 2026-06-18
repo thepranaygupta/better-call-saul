@@ -73,20 +73,20 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
               <Table>
                 <TableHeader>
                   <TableRow className="border-stone-200 hover:bg-transparent">
                     <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
                       Name
                     </TableHead>
-                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 sm:table-cell">
                       Slug
                     </TableHead>
                     <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
                       Status
                     </TableHead>
-                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 md:table-cell">
                       Created
                     </TableHead>
                     <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
@@ -100,7 +100,7 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                       <TableCell className="text-[13px] font-medium text-stone-950">
                         {project.name}
                       </TableCell>
-                      <TableCell className="font-mono text-[12px] text-stone-500">
+                      <TableCell className="hidden font-mono text-[12px] text-stone-500 sm:table-cell">
                         {project.slug}
                       </TableCell>
                       <TableCell>
@@ -120,7 +120,7 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-[12px] text-stone-500">
+                      <TableCell className="hidden text-[12px] text-stone-500 md:table-cell">
                         {new Date(project.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
@@ -155,23 +155,23 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
               <Table>
                 <TableHeader>
                   <TableRow className="border-stone-200 hover:bg-transparent">
                     <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
                       Name
                     </TableHead>
-                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 sm:table-cell">
                       Email
                     </TableHead>
                     <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
                       Role
                     </TableHead>
-                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 md:table-cell">
                       Projects
                     </TableHead>
-                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 lg:table-cell">
                       Created
                     </TableHead>
                   </TableRow>
@@ -179,10 +179,15 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user._id} className="border-stone-200">
-                      <TableCell className="text-[13px] font-medium text-stone-950">
-                        {user.name}
+                      <TableCell>
+                        <div className="text-[13px] font-medium text-stone-950">
+                          {user.name}
+                        </div>
+                        <div className="text-[11px] text-stone-500 sm:hidden">
+                          {user.email}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-[12px] text-stone-500">
+                      <TableCell className="hidden text-[12px] text-stone-500 sm:table-cell">
                         {user.email}
                       </TableCell>
                       <TableCell>
@@ -193,7 +198,7 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                           {ROLE_LABELS[user.role] ?? user.role}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {user.role === 'admin' ? (
                           <span className="text-[11px] italic text-stone-400">
                             All projects
@@ -216,7 +221,7 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-[12px] text-stone-500">
+                      <TableCell className="hidden text-[12px] text-stone-500 lg:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>

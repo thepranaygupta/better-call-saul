@@ -64,13 +64,14 @@ function NavContent({
       <Separator />
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 p-2">
+      <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 p-2">
         {items.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors',
                 isActive
@@ -78,7 +79,7 @@ function NavContent({
                   : 'text-stone-500 hover:bg-stone-100 hover:text-stone-950',
               )}
             >
-              <item.icon className="size-4" />
+              <item.icon className="size-4" aria-hidden="true" />
               {item.label}
             </Link>
           );

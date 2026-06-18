@@ -1,7 +1,7 @@
 'use server';
 
 import { connectDB } from '@/lib/db/connection';
-import { LeadModel, ProjectModel, ActivityModel } from '@/lib/db/models';
+import { LeadModel, ProjectModel, ActivityModel, UserModel } from '@/lib/db/models';
 import { requireAuth, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
 
 const LEADS_PER_PAGE = 50;
@@ -15,6 +15,15 @@ const BAND_ORDER: Record<string, number> = {
   disqualified: 4,
 };
 
+export interface QueueFilters {
+  projectId?: string;
+  band?: string;
+  sourceChannel?: string;
+  assignedBdaId?: string;
+  search?: string;
+  lastActivity?: 'today' | 'this_week' | 'this_month' | 'older';
+}
+
 export interface QueueLead {
   _id: string;
   name: string;
@@ -25,9 +34,16 @@ export interface QueueLead {
   band: 'call_now' | 'qualify' | 'nurture' | 'cold' | 'disqualified';
   projectId: string;
   projectName: string;
+  sourceChannel: string;
+  assignedBdaId: string | null;
   lastActivityAt: string | null;
   registeredAt: string;
   outcome: 'enrolled' | 'not_enrolled' | 'undecided';
+}
+
+export interface QueueBda {
+  _id: string;
+  name: string;
 }
 
 export interface QueueProject {
@@ -38,14 +54,16 @@ export interface QueueProject {
 export interface QueueData {
   leads: QueueLead[];
   projects: QueueProject[];
+  bdas: QueueBda[];
   totalCount: number;
   page: number;
   totalPages: number;
+  currentUserRole: 'admin' | 'sales_lead' | 'bda';
 }
 
 export async function fetchQueueData(
   page: number = 1,
-  projectFilter?: string,
+  filters: QueueFilters = {},
 ): Promise<QueueData> {
   const session = await requireAuth();
   await connectDB();
@@ -53,9 +71,99 @@ export async function fetchQueueData(
   // Build scoped query -- RBAC helpers return Record<string, unknown>
   // which we pass directly to Mongoose filter params
   const baseQuery = scopeLeadQueryToUser(session);
-  const leadFilter = projectFilter && projectFilter !== 'all'
-    ? { ...baseQuery, projectId: projectFilter }
-    : baseQuery;
+  const leadFilter: Record<string, unknown> = { ...baseQuery };
+
+  // Project filter
+  if (filters.projectId && filters.projectId !== 'all') {
+    leadFilter.projectId = filters.projectId;
+  }
+
+  // Band filter
+  if (filters.band && filters.band !== 'all') {
+    leadFilter.band = filters.band;
+  }
+
+  // Source channel filter
+  if (filters.sourceChannel && filters.sourceChannel !== 'all') {
+    leadFilter.sourceChannel = filters.sourceChannel;
+  }
+
+  // Assigned BDA filter
+  if (filters.assignedBdaId && filters.assignedBdaId !== 'all') {
+    leadFilter.assignedBdaId = filters.assignedBdaId;
+  }
+
+  // Search filter -- regex on name, email, phone
+  if (filters.search && filters.search.trim().length > 0) {
+    const escaped = filters.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    leadFilter.$or = [
+      { name: { $regex: escaped, $options: 'i' } },
+      { email: { $regex: escaped, $options: 'i' } },
+      { phone: { $regex: escaped, $options: 'i' } },
+    ];
+  }
+
+  // Last activity filter -- find lead IDs with activity in the time window
+  if (filters.lastActivity) {
+    const now = new Date();
+    let dateThreshold: Date;
+
+    switch (filters.lastActivity) {
+      case 'today': {
+        dateThreshold = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      }
+      case 'this_week': {
+        const dayOfWeek = now.getDay();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - dayOfWeek);
+        startOfWeek.setHours(0, 0, 0, 0);
+        dateThreshold = startOfWeek;
+        break;
+      }
+      case 'this_month': {
+        dateThreshold = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      }
+      case 'older': {
+        // For "older", we want leads whose LATEST activity is older than this month
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Find leads where the latest activity is BEFORE start of month
+        const recentActivityLeadIds = await ActivityModel.aggregate([
+          { $group: { _id: '$leadId', lastAt: { $max: '$occurredAt' } } },
+          { $match: { lastAt: { $lt: startOfMonth } } },
+        ]).exec();
+        const olderLeadIds = recentActivityLeadIds.map(
+          (a: { _id: unknown }) => a._id,
+        );
+        leadFilter._id = { $in: olderLeadIds };
+        dateThreshold = new Date(0); // sentinel -- skip the normal path
+        break;
+      }
+      default:
+        dateThreshold = new Date(0);
+    }
+
+    // For non-'older' filters, find leads with activity >= threshold
+    if (filters.lastActivity !== 'older' && dateThreshold.getTime() > 0) {
+      const activeLeadIds = await (ActivityModel.distinct as Function)('leadId', {
+        occurredAt: { $gte: dateThreshold },
+      });
+      if (leadFilter._id) {
+        // Intersect with existing _id filter
+        const existing = (leadFilter._id as { $in: unknown[] }).$in;
+        leadFilter._id = {
+          $in: activeLeadIds.filter((id: unknown) =>
+            existing.some(
+              (eid: unknown) => String(eid) === String(id),
+            ),
+          ),
+        };
+      } else {
+        leadFilter._id = { $in: activeLeadIds };
+      }
+    }
+  }
 
   // Get total count for pagination
   const totalCount = await LeadModel.countDocuments(leadFilter as any);
@@ -117,6 +225,26 @@ export async function fetchQueueData(
     .lean()
     .exec();
 
+  // Fetch BDAs for the owner filter (only for admin/sales_lead)
+  let bdas: QueueBda[] = [];
+  if (session.user.role === 'admin' || session.user.role === 'sales_lead') {
+    const bdaQuery: Record<string, unknown> = { role: 'bda' };
+    // Sales leads only see BDAs that share at least one project
+    if (session.user.role === 'sales_lead') {
+      bdaQuery.assignedProjectIds = {
+        $in: session.user.assignedProjectIds ?? [],
+      };
+    }
+    const bdaUsers = await UserModel.find(bdaQuery as any)
+      .select('_id name')
+      .lean()
+      .exec();
+    bdas = bdaUsers.map((u: { _id: unknown; name: string }) => ({
+      _id: String(u._id),
+      name: u.name,
+    }));
+  }
+
   return {
     leads: pageLeads.map((lead) => ({
       _id: String(lead._id),
@@ -128,6 +256,8 @@ export async function fetchQueueData(
       band: lead.band ?? 'cold',
       projectId: String(lead.projectId),
       projectName: projectMap.get(String(lead.projectId)) ?? 'Unknown',
+      sourceChannel: lead.sourceChannel ?? 'other',
+      assignedBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
       lastActivityAt: activityMap.get(String(lead._id))?.toISOString() ?? null,
       registeredAt: lead.registeredAt?.toISOString() ?? new Date().toISOString(),
       outcome: lead.outcome ?? 'undecided',
@@ -136,8 +266,10 @@ export async function fetchQueueData(
       _id: String(p._id),
       name: p.name,
     })),
+    bdas,
     totalCount,
     page: safePage,
     totalPages,
+    currentUserRole: session.user.role,
   };
 }

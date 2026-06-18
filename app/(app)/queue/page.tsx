@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { fetchQueueData } from './actions';
+import { fetchQueueData, type QueueFilters } from './actions';
 import { LeadQueueTable } from '@/components/lead-queue-table';
 import QueueLoading from './loading';
 
@@ -9,14 +9,16 @@ export const metadata = {
 
 async function QueueContent({
   page,
-  project,
+  filters,
 }: {
   page: number;
-  project?: string;
+  filters: QueueFilters;
 }) {
-  const data = await fetchQueueData(page, project);
+  const data = await fetchQueueData(page, filters);
   return <LeadQueueTable data={data} />;
 }
+
+const VALID_LAST_ACTIVITY = ['today', 'this_week', 'this_month', 'older'] as const;
 
 export default async function QueuePage({
   searchParams,
@@ -25,7 +27,30 @@ export default async function QueuePage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
-  const project = typeof params.project === 'string' ? params.project : undefined;
+
+  const filters: QueueFilters = {};
+
+  if (typeof params.project === 'string' && params.project !== 'all') {
+    filters.projectId = params.project;
+  }
+  if (typeof params.band === 'string' && params.band !== 'all') {
+    filters.band = params.band;
+  }
+  if (typeof params.source === 'string' && params.source !== 'all') {
+    filters.sourceChannel = params.source;
+  }
+  if (typeof params.owner === 'string' && params.owner !== 'all') {
+    filters.assignedBdaId = params.owner;
+  }
+  if (typeof params.search === 'string' && params.search.trim().length > 0) {
+    filters.search = params.search;
+  }
+  if (
+    typeof params.activity === 'string' &&
+    VALID_LAST_ACTIVITY.includes(params.activity as (typeof VALID_LAST_ACTIVITY)[number])
+  ) {
+    filters.lastActivity = params.activity as QueueFilters['lastActivity'];
+  }
 
   return (
     <div className="space-y-4">
@@ -36,7 +61,7 @@ export default async function QueuePage({
         </p>
       </div>
       <Suspense fallback={<QueueLoading />}>
-        <QueueContent page={page} project={project} />
+        <QueueContent page={page} filters={filters} />
       </Suspense>
     </div>
   );

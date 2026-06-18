@@ -10,7 +10,12 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "db": "docker start saul-mongo 2>/dev/null || docker run -d -p 27017:27017 --name saul-mongo mongo:7",
+    "db:stop": "docker stop saul-mongo",
+    "setup": "npm run db && npm run seed",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -46,6 +51,7 @@
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",
     "tsx": "^4.22.4",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.9"
   }
 }

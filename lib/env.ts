@@ -8,6 +8,7 @@ const envSchema = z.object({
   AZURE_OPENAI_ENDPOINT: z.url().optional(),
   AZURE_OPENAI_API_KEY: z.string().optional(),
   AZURE_OPENAI_DEPLOYMENT: z.string().optional(),
+  AZURE_OPENAI_API_VERSION: z.string().optional(),
 });
 
 // Fail fast at startup if required env vars are missing

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
 import { scopeLeadQueryToUser } from '@/lib/auth/rbac';
 import { connectDB } from '@/lib/db/connection';
@@ -17,6 +17,34 @@ import { generateBriefSchema } from '@/lib/validation/schemas';
 import { isAIAvailable, azureOpenAI } from '@/lib/ai/client';
 import { callBriefSchema } from '@/lib/ai/schemas';
 import { buildBriefSystemPrompt, buildBriefUserPrompt } from '@/lib/ai/prompts';
+
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const leadId = request.nextUrl.searchParams.get('leadId');
+  const language = request.nextUrl.searchParams.get('language');
+  if (!leadId || !language) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+
+  await connectDB();
+  const scoped = scopeLeadQueryToUser(session, { _id: leadId });
+  const lead = await LeadModel.findOne(scoped as any).lean();
+  if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const cached = await CallBriefModel.findOne({ leadId, language } as any).sort({ generatedAt: -1 }).lean();
+  if (!cached) return NextResponse.json({ brief: null });
+
+  return NextResponse.json({
+    brief: {
+      summary: cached.summary,
+      talkingPoints: cached.talkingPoints,
+      likelyObjections: cached.likelyObjections,
+      language: cached.language,
+      generatedAt: cached.generatedAt,
+      cached: true,
+    },
+  });
+}
 
 export async function POST(request: Request) {
   // --- Auth check ---
@@ -43,14 +71,6 @@ export async function POST(request: Request) {
 
   const { leadId, language } = parsed.data;
 
-  // --- AI availability check ---
-  if (!isAIAvailable()) {
-    return NextResponse.json(
-      { error: 'AI is not configured. Set Azure OpenAI environment variables.' },
-      { status: 503 },
-    );
-  }
-
   await connectDB();
 
   // --- RBAC: verify lead belongs to user's project scope ---
@@ -63,7 +83,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // --- Cache check: return existing brief if available ---
+  // --- Cache check BEFORE AI availability (cached briefs persist across restarts) ---
   const existingBrief = await CallBriefModel.findOne({
     leadId,
     language,
@@ -82,6 +102,14 @@ export async function POST(request: Request) {
         cached: true,
       },
     });
+  }
+
+  // --- AI availability check (only needed for NEW generation) ---
+  if (!isAIAvailable()) {
+    return NextResponse.json(
+      { error: 'AI is not configured. Set Azure OpenAI environment variables.' },
+      { status: 503 },
+    );
   }
 
   // --- Fetch context: signals, dispositions, snapshot, masterclass ---

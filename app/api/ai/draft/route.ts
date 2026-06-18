@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
 import { scopeLeadQueryToUser } from '@/lib/auth/rbac';
 import { connectDB } from '@/lib/db/connection';
@@ -15,6 +15,26 @@ import { generateDraftSchema } from '@/lib/validation/schemas';
 import { isAIAvailable, azureOpenAI } from '@/lib/ai/client';
 import { messageDraftSchema } from '@/lib/ai/schemas';
 import { buildDraftSystemPrompt, buildDraftUserPrompt } from '@/lib/ai/prompts';
+
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const leadId = request.nextUrl.searchParams.get('leadId');
+  const channel = request.nextUrl.searchParams.get('channel');
+  const language = request.nextUrl.searchParams.get('language');
+  if (!leadId || !channel || !language) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+
+  await connectDB();
+  const scoped = scopeLeadQueryToUser(session, { _id: leadId });
+  const lead = await LeadModel.findOne(scoped as any).lean();
+  if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const cached = await (MessageDraftModel as any).findOne({ leadId, channel, language }).sort({ generatedAt: -1 }).lean();
+  if (!cached) return NextResponse.json({ draft: null });
+
+  return NextResponse.json({ draft: { subject: cached.subject, body: cached.body, channel: cached.channel, language: cached.language, cached: true } });
+}
 
 export async function POST(request: Request) {
   // ---- Auth ----
@@ -41,14 +61,6 @@ export async function POST(request: Request) {
 
   const { leadId, channel, language } = parsed.data;
 
-  // ---- AI availability check ----
-  if (!isAIAvailable()) {
-    return NextResponse.json(
-      { error: 'AI features are not configured' },
-      { status: 503 },
-    );
-  }
-
   await connectDB();
 
   // ---- RBAC: verify lead belongs to user's scope ----
@@ -61,7 +73,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // ---- Check cache: return existing draft for same channel+language ----
+  // ---- Check cache BEFORE AI availability ----
   const existing = await (MessageDraftModel as any)
     .findOne({ leadId, channel, language })
     .sort({ generatedAt: -1 })
@@ -73,6 +85,14 @@ export async function POST(request: Request) {
       body: existing.body,
       cached: true,
     });
+  }
+
+  // ---- AI availability check (only for new generation) ----
+  if (!isAIAvailable()) {
+    return NextResponse.json(
+      { error: 'AI features are not configured' },
+      { status: 503 },
+    );
   }
 
   // ---- Gather context for the prompt ----

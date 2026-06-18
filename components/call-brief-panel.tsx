@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 type Language = 'en' | 'hi' | 'hinglish';
@@ -36,6 +36,20 @@ export function CallBriefPanel({ leadId, isAIAvailable: aiAvailable }: CallBrief
   const [error, setError] = useState<string | null>(null);
 
   const currentBrief = brief[language];
+
+  useEffect(() => {
+    async function loadCached() {
+      for (const lang of ['en', 'hi', 'hinglish'] as Language[]) {
+        try {
+          const res = await fetch(`/api/ai/brief?leadId=${leadId}&language=${lang}`);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.brief) setBrief((prev) => ({ ...prev, [lang]: data.brief as CallBrief }));
+        } catch { /* no cached brief for this language */ }
+      }
+    }
+    loadCached();
+  }, [leadId]);
 
   const generateBrief = useCallback(async () => {
     setLoading(true);

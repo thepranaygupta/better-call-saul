@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AIUnavailable } from '@/components/ai-unavailable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -38,6 +38,18 @@ export function MessageDraftPanel({ leadId }: MessageDraftPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    async function loadCached() {
+      try {
+        const res = await fetch(`/api/ai/draft?leadId=${leadId}&channel=${channel}&language=${language}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.draft) setDraft(data.draft as DraftResult);
+      } catch { /* no cached draft */ }
+    }
+    loadCached();
+  }, [leadId, channel, language]);
 
   const generateDraft = useCallback(async () => {
     setLoading(true);

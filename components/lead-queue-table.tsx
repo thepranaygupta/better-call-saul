@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -37,7 +37,7 @@ import type { QueueData, QueueLead } from '@/app/(app)/queue/actions';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function timeAgo(dateStr: string | null): string {
+function formatTimeAgo(dateStr: string | null): string {
   if (!dateStr) return '--';
   const now = new Date();
   const d = new Date(dateStr);
@@ -50,6 +50,27 @@ function timeAgo(dateStr: string | null): string {
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+/** Stable date string for SSR (no relative time that drifts between server/client) */
+function formatDateStable(dateStr: string | null): string {
+  if (!dateStr) return '--';
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+/** Renders relative time client-side only to avoid hydration mismatch */
+function TimeAgo({ date, className }: { date: string | null; className?: string }) {
+  const [display, setDisplay] = useState(() => formatDateStable(date));
+
+  useEffect(() => {
+    setDisplay(formatTimeAgo(date));
+    if (!date) return;
+    // Refresh every 60s so "Xm ago" stays current
+    const interval = setInterval(() => setDisplay(formatTimeAgo(date)), 60_000);
+    return () => clearInterval(interval);
+  }, [date]);
+
+  return <span className={className}>{display}</span>;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -354,9 +375,10 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
         return a - b;
       },
       cell: ({ row }) => (
-        <span className="text-xs tabular-nums text-stone-400">
-          {timeAgo(row.original.lastActivityAt)}
-        </span>
+        <TimeAgo
+          date={row.original.lastActivityAt}
+          className="text-xs tabular-nums text-stone-400"
+        />
       ),
     },
   ];
@@ -679,9 +701,10 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                 </div>
                 <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pl-3">
                   <IntentScoreCell score={row.original.intentScore} />
-                  <span className="text-[10px] tabular-nums text-stone-400">
-                    {timeAgo(row.original.lastActivityAt)}
-                  </span>
+                  <TimeAgo
+                    date={row.original.lastActivityAt}
+                    className="text-[10px] tabular-nums text-stone-400"
+                  />
                   <span
                     className={cn(
                       'text-[10px] font-medium',

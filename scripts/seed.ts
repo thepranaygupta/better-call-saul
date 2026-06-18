@@ -198,169 +198,8 @@ const POLL_RESPONSES: string[] = [
   'Need help with automation',
 ];
 
-// ---------------------------------------------------------------------------
-// Inline scoring function (approximates the real scoring engine)
-// This will be replaced by lib/scoring/score.ts once Task 10 is done.
-// ---------------------------------------------------------------------------
-
-interface LeadSeedData {
-  occupationType: 'working_professional' | 'student' | 'other';
-  seniority?: string;
-  sourceChannel: string;
-  isExistingCustomer: boolean;
-  email: string;
-}
-
-interface ActivitySeedData {
-  type: string;
-  numericValue?: number;
-  occurredAt: Date;
-}
-
-interface SignalSeedData {
-  signalType: string;
-  polarity: string;
-}
-
-type Band = 'call_now' | 'qualify' | 'nurture' | 'cold' | 'disqualified';
-
-interface ScoringResult {
-  fitScore: number;
-  intentScore: number;
-  band: Band;
-  contributions: { signal: string; category: 'fit' | 'intent' | 'negative'; weight: number; points: number }[];
-}
-
-const FIT_WEIGHTS: Record<string, number> = {
-  working_professional: 30, student: 5, other: 10,
-  senior: 20, mid: 15, junior: 10, unknown: 5,
-  referral: 25, email: 20, organic: 15, paid_search: 10, paid_social: 5, source_other: 5,
-  existing_customer: 15,
-};
-
-const INTENT_WEIGHTS: Record<string, number> = {
-  attended_live: 30, watched_replay: 15, clicked_offer: 25,
-  watch_percentage: 20, chat_message: 5, question_asked: 10,
-  poll_response: 5, reregistered: 10, no_show: -10,
-  asked_emi: 20, asked_price: 15, asked_job_outcome: 15,
-  expressed_career_switch: 20, high_enthusiasm: 15,
-  price_objection: 5, competitor_mention: 5, not_interested: -30,
-  asked_time_commitment: 10, asked_refund_guarantee: 10,
-};
-
-const DECAY_HALF_LIFE_DAYS = 7;
-const THRESHOLD_HOT = 60;
-const THRESHOLD_WARM = 35;
-
-function computeDecay(occurredAt: Date, now: Date): number {
-  const daysDiff = (now.getTime() - occurredAt.getTime()) / (1000 * 60 * 60 * 24);
-  return Math.pow(0.5, daysDiff / DECAY_HALF_LIFE_DAYS);
-}
-
-function computeScore(
-  lead: LeadSeedData,
-  activities: ActivitySeedData[],
-  signals: SignalSeedData[],
-  now: Date,
-): ScoringResult {
-  const contributions: ScoringResult['contributions'] = [];
-  let fitRaw = 0;
-  let intentRaw = 0;
-  let isDisqualified = false;
-
-  // --- Fit scoring (stable attributes, no decay) ---
-  const occWeight = FIT_WEIGHTS[lead.occupationType] ?? 0;
-  if (occWeight > 0) {
-    contributions.push({ signal: lead.occupationType, category: 'fit', weight: occWeight, points: occWeight });
-    fitRaw += occWeight;
-  }
-
-  const senWeight = FIT_WEIGHTS[lead.seniority ?? 'unknown'] ?? 0;
-  if (senWeight > 0) {
-    contributions.push({ signal: `seniority_${lead.seniority ?? 'unknown'}`, category: 'fit', weight: senWeight, points: senWeight });
-    fitRaw += senWeight;
-  }
-
-  const srcKey = lead.sourceChannel === 'other' ? 'source_other' : lead.sourceChannel;
-  const srcWeight = FIT_WEIGHTS[srcKey] ?? 0;
-  if (srcWeight > 0) {
-    contributions.push({ signal: `source_${lead.sourceChannel}`, category: 'fit', weight: srcWeight, points: srcWeight });
-    fitRaw += srcWeight;
-  }
-
-  if (lead.isExistingCustomer) {
-    const ecw = FIT_WEIGHTS.existing_customer ?? 0;
-    contributions.push({ signal: 'existing_customer', category: 'fit', weight: ecw, points: ecw });
-    fitRaw += ecw;
-  }
-
-  // Check for student email domain as disqualifier
-  if (lead.email.match(/\.(edu|ac\.in|edu\.in)$/i)) {
-    isDisqualified = true;
-    contributions.push({ signal: 'student_email_domain', category: 'negative', weight: 0, points: -100 });
-  }
-
-  // --- Intent scoring (activities, with time decay) ---
-  for (const act of activities) {
-    if (act.type === 'registered') continue; // baseline, not scored
-    if (act.type === 'unsubscribed') {
-      isDisqualified = true;
-      contributions.push({ signal: 'unsubscribed', category: 'negative', weight: 0, points: -100 });
-      continue;
-    }
-
-    const decay = computeDecay(act.occurredAt, now);
-    let weight = INTENT_WEIGHTS[act.type] ?? 0;
-
-    // Special handling for watch_percentage
-    if (act.type === 'watch_percentage' && act.numericValue !== undefined) {
-      weight = Math.round((INTENT_WEIGHTS.watch_percentage ?? 0) * (act.numericValue / 100));
-    }
-
-    const decayedPoints = Math.round(weight * decay);
-    if (weight !== 0) {
-      contributions.push({ signal: act.type, category: weight < 0 ? 'negative' : 'intent', weight, points: decayedPoints });
-      intentRaw += decayedPoints;
-    }
-  }
-
-  // --- Intent scoring (extracted signals) ---
-  for (const sig of signals) {
-    const weight = INTENT_WEIGHTS[sig.signalType] ?? 0;
-    if (sig.signalType === 'not_interested') {
-      isDisqualified = true;
-      contributions.push({ signal: 'not_interested', category: 'negative', weight, points: weight });
-      intentRaw += weight;
-    } else if (weight !== 0) {
-      contributions.push({ signal: sig.signalType, category: weight < 0 ? 'negative' : 'intent', weight, points: weight });
-      intentRaw += weight;
-    }
-  }
-
-  // Normalize to 0-100
-  const maxFit = 90; // theoretical max: 30 + 20 + 25 + 15
-  const maxIntent = 120; // theoretical max sum of positive intents
-  const fitScore = Math.max(0, Math.min(100, Math.round((fitRaw / maxFit) * 100)));
-  const intentScore = Math.max(0, Math.min(100, Math.round((Math.max(0, intentRaw) / maxIntent) * 100)));
-
-  // Band assignment
-  let band: Band;
-  if (isDisqualified) {
-    band = 'disqualified';
-  } else if (fitScore >= THRESHOLD_HOT && intentScore >= THRESHOLD_HOT) {
-    band = 'call_now';
-  } else if (intentScore >= THRESHOLD_HOT && fitScore < THRESHOLD_HOT) {
-    band = 'qualify';
-  } else if (fitScore >= THRESHOLD_WARM && intentScore < THRESHOLD_HOT) {
-    band = 'nurture';
-  } else if (fitScore >= THRESHOLD_HOT && intentScore >= THRESHOLD_WARM) {
-    band = 'nurture';
-  } else {
-    band = 'cold';
-  }
-
-  return { fitScore, intentScore, band, contributions };
-}
+import { scoreLead, DEFAULT_SCORING_CONFIG } from '../lib/scoring';
+import type { LeadInput, ActivityInput, SignalInput } from '../lib/scoring';
 
 // ---------------------------------------------------------------------------
 // Main seed function
@@ -499,8 +338,8 @@ async function seed() {
 
       // Student email domains occasionally (to test disqualifier)
       const emailDomains = isStudent && seededRandom() < 0.3
-        ? ['iitb.ac.in', 'iitd.ac.in', 'bits-pilani.ac.in', 'du.ac.in', 'vit.edu']
-        : ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'rediffmail.com'];
+        ? ['iitb.ac.in', 'iitd.ac.in', 'bits-pilani.ac.in', 'du.ac.in', 'vit.edu', ]
+        : ['gmail.com', 'yahoo.com', 'outlook.com'];
       const emailDomain = pick(emailDomains);
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomInt(1, 99)}@${emailDomain}`;
 
@@ -686,10 +525,11 @@ async function seed() {
       }
 
       // --- Score the lead ---
-      const scoreResult = computeScore(
-        { occupationType, seniority, sourceChannel, isExistingCustomer, email },
-        leadActivities,
-        leadChatSignals,
+      const scoreResult = scoreLead(
+        { occupationType, seniority: seniority as any, sourceChannel: sourceChannel as any, isExistingCustomer, email },
+        leadActivities.map(a => ({ type: a.type as any, numericValue: a.numericValue, occurredAt: a.occurredAt })),
+        leadChatSignals.map(s => ({ signalType: s.signalType as any, polarity: s.polarity as any, confidence: 0.9, extractedAt: now })),
+        DEFAULT_SCORING_CONFIG,
         now,
       );
 

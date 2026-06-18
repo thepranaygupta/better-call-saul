@@ -168,12 +168,6 @@ npm run test:e2e   # Playwright
 
 **Observability.** Structured API errors that leak no stack traces. In production: Sentry for error tracking, OpenTelemetry for request tracing, Mongo connection pool monitoring.
 
-**PII & India DPDP Act.** This demo uses synthetic data. In production: lead PII (name, email, phone) requires explicit consent and purpose limitation under the Digital Personal Data Protection Act, 2023. Data retention policies, right-to-erasure workflows, and encryption at rest would be mandatory. The audit log provides the access trail.
-
-**Prior art.** The company uses an established CRM (per public job postings / BuiltWith). Saul is a from-scratch 2026 fit×intent + LLM-augmented take focused on explainability and the unstructured-signal layer a classic CRM doesn't cover — built to demonstrate the approach, not to replace their stack.
-
----
-
 ---
 
 <p align="center">

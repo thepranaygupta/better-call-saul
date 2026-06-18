@@ -35,5 +35,28 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# project docs (local only)
 docs/
 CLAUDE.md
+.qodo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env*.local
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# vitest
+/coverage/

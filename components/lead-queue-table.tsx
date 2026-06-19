@@ -912,8 +912,6 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
         </>
       )}
 
-      </div>{/* end dimming wrapper */}
-
       {/* ── Pagination ────────────────────────────────────── */}
       {data.totalPages > 1 && (
         <div className={cn(
@@ -945,6 +943,8 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
           </div>
         </div>
       )}
+
+      </div>{/* end dimming wrapper */}
 
       {/* ── Bulk assign bar (fixed bottom, only when leads selected) ── */}
       {canAssign && selectedLeadIds.length > 0 && (

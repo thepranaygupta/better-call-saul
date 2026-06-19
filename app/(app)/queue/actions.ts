@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { revalidatePath } from 'next/cache';
 import { connectDB } from '@/lib/db/connection';
 import { LeadModel, ProjectModel, ActivityModel, UserModel } from '@/lib/db/models';
-import { requireAuth, requireRole, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
+import { requireAuth, requireRole, scopeLeadQueryToUser } from '@/lib/auth/rbac';
 import { assignLeadSchema, bulkAssignLeadsSchema } from '@/lib/validation/schemas';
 import { logAudit } from '@/lib/audit';
 
@@ -95,9 +95,9 @@ export async function fetchQueueData(
     leadFilter.projectId = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
   }
 
-  // Project filter (cast to ObjectId for aggregate compatibility)
+  // Project filter (cast to ObjectId for aggregate compatibility, skip on invalid IDs)
   if (filters.projectId && filters.projectId !== 'all') {
-    leadFilter.projectId = new mongoose.Types.ObjectId(filters.projectId);
+    try { leadFilter.projectId = new mongoose.Types.ObjectId(filters.projectId); } catch { /* invalid ID, ignore filter */ }
   }
 
   // Band filter
@@ -110,9 +110,9 @@ export async function fetchQueueData(
     leadFilter.sourceChannel = filters.sourceChannel;
   }
 
-  // Assigned BDA filter (cast to ObjectId for aggregate compatibility)
+  // Assigned BDA filter (cast to ObjectId, skip on invalid IDs)
   if (filters.assignedBdaId && filters.assignedBdaId !== 'all') {
-    leadFilter.assignedBdaId = new mongoose.Types.ObjectId(filters.assignedBdaId);
+    try { leadFilter.assignedBdaId = new mongoose.Types.ObjectId(filters.assignedBdaId); } catch { /* invalid ID, ignore filter */ }
   }
 
   // Search filter -- regex on name, email, phone

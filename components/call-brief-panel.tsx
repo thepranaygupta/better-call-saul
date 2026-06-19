@@ -38,24 +38,14 @@ export function CallBriefPanel({ leadId, isAIAvailable: aiAvailable }: CallBrief
   const currentBrief = brief[language];
 
   useEffect(() => {
-    async function loadCached() {
-      const results = await Promise.all(
-        (['en', 'hi', 'hinglish'] as Language[]).map(async (lang) => {
-          try {
-            const res = await fetch(`/api/ai/brief?leadId=${leadId}&language=${lang}`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            return data.brief ? { lang, brief: data.brief as CallBrief } : null;
-          } catch { return null; }
-        }),
-      );
-      setBrief((prev) => {
-        const next = { ...prev };
-        for (const r of results) if (r) next[r.lang] = r.brief;
-        return next;
-      });
+    for (const lang of ['en', 'hi', 'hinglish'] as Language[]) {
+      fetch(`/api/ai/brief?leadId=${leadId}&language=${lang}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.brief) setBrief((prev) => ({ ...prev, [lang]: data.brief as CallBrief }));
+        })
+        .catch(() => {});
     }
-    loadCached();
   }, [leadId]);
 
   const generateBrief = useCallback(async () => {

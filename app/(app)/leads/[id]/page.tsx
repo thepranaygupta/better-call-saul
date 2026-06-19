@@ -64,9 +64,9 @@ function LeadHeader({
             <BandBadge band={lead.band as Band} />
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-stone-500">
-            <span>{lead.email}</span>
+            <a href={`mailto:${lead.email}`} className="text-amber-700 underline underline-offset-2 hover:text-amber-800 transition-colors">{lead.email}</a>
             <span className="text-stone-300">|</span>
-            <span>{lead.phone}</span>
+            <a href={`tel:${lead.phone}`} className="text-amber-700 underline underline-offset-2 hover:text-amber-800 transition-colors">{lead.phone}</a>
           </div>
           {assignSlot}
         </div>

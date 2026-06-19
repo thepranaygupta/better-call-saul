@@ -20,16 +20,31 @@ import { buildBriefSystemPrompt, buildBriefUserPrompt } from '@/lib/ai/prompts';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
+  }
 
   const leadId = request.nextUrl.searchParams.get('leadId');
   const language = request.nextUrl.searchParams.get('language');
-  if (!leadId || !language) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+  if (!leadId || !language) {
+    return NextResponse.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Missing required params: leadId, language' } },
+      { status: 400 },
+    );
+  }
 
   await connectDB();
   const scoped = scopeLeadQueryToUser(session, { _id: leadId });
   const lead = await LeadModel.findOne(scoped as any).lean();
-  if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!lead) {
+    return NextResponse.json(
+      { error: { code: 'NOT_FOUND', message: 'Lead not found or access denied' } },
+      { status: 404 },
+    );
+  }
 
   const cached = await CallBriefModel.findOne({ leadId, language } as any).sort({ generatedAt: -1 }).lean();
   if (!cached) return NextResponse.json({ brief: null });
@@ -50,7 +65,10 @@ export async function POST(request: Request) {
   // --- Auth check ---
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
   }
 
   // --- Parse + validate input ---
@@ -58,13 +76,16 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON body' } },
+      { status: 400 },
+    );
   }
 
   const parsed = generateBriefSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Validation failed', issues: parsed.error.issues },
+      { error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message ?? 'Validation failed' } },
       { status: 400 },
     );
   }
@@ -78,7 +99,7 @@ export async function POST(request: Request) {
   const lead = await LeadModel.findOne(scopedQuery as any).lean();
   if (!lead) {
     return NextResponse.json(
-      { error: 'Lead not found or access denied' },
+      { error: { code: 'NOT_FOUND', message: 'Lead not found or access denied' } },
       { status: 404 },
     );
   }
@@ -107,7 +128,7 @@ export async function POST(request: Request) {
   // --- AI availability check (only needed for NEW generation) ---
   if (!isAIAvailable()) {
     return NextResponse.json(
-      { error: 'AI is not configured. Set Azure OpenAI environment variables.' },
+      { error: { code: 'AI_UNAVAILABLE', message: 'AI is not configured. Set Azure OpenAI environment variables.' } },
       { status: 503 },
     );
   }
@@ -189,8 +210,8 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('[/api/ai/brief] AI generation failed:', err);
     return NextResponse.json(
-      { error: 'Failed to generate call brief. Please try again.' },
-      { status: 500 },
+      { error: { code: 'AI_ERROR', message: 'Failed to generate call brief. Please try again.' } },
+      { status: 502 },
     );
   }
 }

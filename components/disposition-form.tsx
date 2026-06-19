@@ -53,25 +53,26 @@ export function DispositionForm({ leadId, onDispositionLogged }: DispositionForm
     setError(null);
 
     startTransition(async () => {
-      try {
-        const result = await logDisposition({
-          leadId,
-          outcome,
-          notes: notes.trim() || undefined,
-          nextActionAt: nextActionAt || undefined,
-        });
+      const result = await logDisposition({
+        leadId,
+        outcome,
+        notes: notes.trim() || undefined,
+        nextActionAt: nextActionAt || undefined,
+      });
 
-        if (result.success && result.disposition && onDispositionLogged) {
-          onDispositionLogged(result.disposition);
-        }
-
-        // Reset form
-        setOutcome('');
-        setNotes('');
-        setNextActionAt('');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to log disposition');
+      if (!result.success) {
+        setError(result.error);
+        return;
       }
+
+      if (result.disposition && onDispositionLogged) {
+        onDispositionLogged(result.disposition);
+      }
+
+      // Reset form
+      setOutcome('');
+      setNotes('');
+      setNextActionAt('');
     });
   };
 

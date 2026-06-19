@@ -53,10 +53,16 @@ export async function POST(req: NextRequest) {
   // ---- Auth: admin only ----
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
   }
   if (session.user.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json(
+      { error: { code: 'FORBIDDEN', message: 'Admin access required' } },
+      { status: 403 },
+    );
   }
 
   // ---- Parse body ----
@@ -65,7 +71,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { error: 'Invalid JSON body' },
+      { error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON body' } },
       { status: 400 },
     );
   }
@@ -74,13 +80,7 @@ export async function POST(req: NextRequest) {
   const parsed = bulkLeadImportSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      {
-        error: 'Validation failed',
-        details: parsed.error.issues.map((i) => ({
-          path: i.path.join('.'),
-          message: i.message,
-        })),
-      },
+      { error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message ?? 'Validation failed' } },
       { status: 400 },
     );
   }

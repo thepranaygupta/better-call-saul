@@ -226,14 +226,14 @@ function NavContent({
   return (
     <div className="flex h-full flex-col">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <PhoneCallIcon className="size-5 text-amber-700" />
-        <span className="text-sm font-semibold uppercase tracking-widest text-stone-950">
+      <div className="px-4 py-4">
+        <div className="text-[18px] font-bold tracking-[0.3em] text-stone-950">
           SAUL
-        </span>
+        </div>
+        <div className="text-[9px] tracking-[0.2em] text-stone-400">
+          BETTER CALL YOUR HOTTEST LEAD
+        </div>
       </div>
-
-      <Separator />
 
       {/* Next Lead + Quick Stats */}
       <div className="space-y-2 p-2">

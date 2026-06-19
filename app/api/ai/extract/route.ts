@@ -34,13 +34,16 @@ export async function POST(req: NextRequest) {
   // ---- Auth ----
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
   }
 
   // ---- AI availability check ----
   if (!isAIAvailable()) {
     return NextResponse.json(
-      { error: 'AI service is not configured. Signal extraction is unavailable.' },
+      { error: { code: 'AI_UNAVAILABLE', message: 'AI service is not configured. Signal extraction is unavailable.' } },
       { status: 503 },
     );
   }
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { error: 'Invalid JSON body' },
+      { error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON body' } },
       { status: 400 },
     );
   }
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest) {
   const parsed = requestBodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Validation failed', details: parsed.error.issues },
+      { error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message ?? 'Validation failed' } },
       { status: 400 },
     );
   }
@@ -72,7 +75,10 @@ export async function POST(req: NextRequest) {
   const scopedQuery = scopeLeadQueryToUser(session, { _id: leadId });
   const lead = await LeadModel.findOne(scopedQuery as any).lean();
   if (!lead) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json(
+      { error: { code: 'FORBIDDEN', message: 'Lead not found or access denied' } },
+      { status: 403 },
+    );
   }
 
   // ---- Fetch text activities for this lead ----
@@ -110,7 +116,7 @@ export async function POST(req: NextRequest) {
       err instanceof Error ? err.message : String(err),
     );
     return NextResponse.json(
-      { error: 'AI extraction failed. Please try again later.' },
+      { error: { code: 'AI_ERROR', message: 'AI extraction failed. Please try again later.' } },
       { status: 502 },
     );
   }

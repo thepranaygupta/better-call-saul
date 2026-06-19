@@ -18,17 +18,32 @@ import { buildDraftSystemPrompt, buildDraftUserPrompt } from '@/lib/ai/prompts';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
+  }
 
   const leadId = request.nextUrl.searchParams.get('leadId');
   const channel = request.nextUrl.searchParams.get('channel');
   const language = request.nextUrl.searchParams.get('language');
-  if (!leadId || !channel || !language) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+  if (!leadId || !channel || !language) {
+    return NextResponse.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Missing required params: leadId, channel, language' } },
+      { status: 400 },
+    );
+  }
 
   await connectDB();
   const scoped = scopeLeadQueryToUser(session, { _id: leadId });
   const lead = await LeadModel.findOne(scoped as any).lean();
-  if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!lead) {
+    return NextResponse.json(
+      { error: { code: 'NOT_FOUND', message: 'Lead not found or access denied' } },
+      { status: 404 },
+    );
+  }
 
   const cached = await (MessageDraftModel as any).findOne({ leadId, channel, language }).sort({ generatedAt: -1 }).lean();
   if (!cached) return NextResponse.json({ draft: null });
@@ -40,7 +55,10 @@ export async function POST(request: Request) {
   // ---- Auth ----
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    );
   }
 
   // ---- Parse + validate body ----
@@ -48,13 +66,16 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON body' } },
+      { status: 400 },
+    );
   }
 
   const parsed = generateDraftSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Validation failed', issues: parsed.error.issues },
+      { error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message ?? 'Validation failed' } },
       { status: 400 },
     );
   }
@@ -68,7 +89,7 @@ export async function POST(request: Request) {
   const lead = await LeadModel.findOne(scoped as any).lean();
   if (!lead) {
     return NextResponse.json(
-      { error: 'Lead not found or access denied' },
+      { error: { code: 'NOT_FOUND', message: 'Lead not found or access denied' } },
       { status: 404 },
     );
   }
@@ -90,7 +111,7 @@ export async function POST(request: Request) {
   // ---- AI availability check (only for new generation) ----
   if (!isAIAvailable()) {
     return NextResponse.json(
-      { error: 'AI features are not configured' },
+      { error: { code: 'AI_UNAVAILABLE', message: 'AI features are not configured' } },
       { status: 503 },
     );
   }
@@ -157,10 +178,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('[/api/ai/draft] AI generation failed:', err);
     return NextResponse.json(
-      {
-        error: 'Draft generation failed',
-        message: err instanceof Error ? err.message : 'Unknown error',
-      },
+      { error: { code: 'AI_ERROR', message: 'Draft generation failed. Please try again.' } },
       { status: 502 },
     );
   }

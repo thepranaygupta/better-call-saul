@@ -332,41 +332,45 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
 
 export async function logDisposition(
   data: unknown,
-): Promise<{ success: boolean; disposition?: LeadDetailDisposition }> {
+): Promise<{ success: true; disposition?: LeadDetailDisposition } | { success: false; error: string }> {
   const session = await requireAuth();
-  const parsed = createDispositionSchema.parse(data);
+
+  const parsed = createDispositionSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  }
 
   await connectDB();
 
   // RBAC: verify lead belongs to user's scope
-  const scoped = scopeLeadQueryToUser(session, { _id: parsed.leadId });
+  const scoped = scopeLeadQueryToUser(session, { _id: parsed.data.leadId });
   const lead = await LeadModel.findOne(scoped as any).lean();
-  if (!lead) throw new Error('Lead not found or access denied');
+  if (!lead) return { success: false, error: 'Lead not found or access denied' };
 
   const disposition = await DispositionModel.create({
-    leadId: parsed.leadId,
+    leadId: parsed.data.leadId,
     bdaId: session.user.id,
-    outcome: parsed.outcome,
-    notes: parsed.notes,
-    nextActionAt: parsed.nextActionAt,
+    outcome: parsed.data.outcome,
+    notes: parsed.data.notes,
+    nextActionAt: parsed.data.nextActionAt,
   });
 
   // Update lead outcome if enrolled or not_interested
-  if (parsed.outcome === 'enrolled') {
-    await (LeadModel as any).findByIdAndUpdate(parsed.leadId, {
+  if (parsed.data.outcome === 'enrolled') {
+    await (LeadModel as any).findByIdAndUpdate(parsed.data.leadId, {
       outcome: 'enrolled',
     });
-  } else if (parsed.outcome === 'not_interested') {
-    await (LeadModel as any).findByIdAndUpdate(parsed.leadId, {
+  } else if (parsed.data.outcome === 'not_interested') {
+    await (LeadModel as any).findByIdAndUpdate(parsed.data.leadId, {
       outcome: 'not_enrolled',
     });
   }
 
-  await logAudit(session.user.id, 'log_disposition', 'lead', parsed.leadId, {
-    outcome: parsed.outcome,
+  await logAudit(session.user.id, 'log_disposition', 'lead', parsed.data.leadId, {
+    outcome: parsed.data.outcome,
   });
 
-  revalidatePath(`/leads/${parsed.leadId}`);
+  revalidatePath(`/leads/${parsed.data.leadId}`);
 
   return {
     success: true,

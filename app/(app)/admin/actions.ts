@@ -286,13 +286,18 @@ export async function getScoringConfigHistory(
  */
 export async function updateScoringConfig(
   data: unknown,
-): Promise<{ version: number }> {
+): Promise<{ success: true; version: number } | { success: false; error: string }> {
   const session = await requireRole('admin');
-  const parsed = updateScoringConfigSchema.parse(data);
+
+  const parsed = updateScoringConfigSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  }
+
   await connectDB();
 
-  const filter = parsed.projectId
-    ? { projectId: parsed.projectId }
+  const filter = parsed.data.projectId
+    ? { projectId: parsed.data.projectId }
     : { projectId: { $exists: false } };
 
   const current = await (ScoringConfigModel as any).findOne(filter)
@@ -302,7 +307,7 @@ export async function updateScoringConfig(
   const newVersion = (current?.version ?? 0) + 1;
 
   const newConfig = await (ScoringConfigModel as any).create({
-    ...parsed,
+    ...parsed.data,
     version: newVersion,
     updatedBy: session.user.id,
     updatedAt: new Date(),
@@ -317,7 +322,7 @@ export async function updateScoringConfig(
   );
 
   revalidatePath('/admin/scoring');
-  return { version: newVersion };
+  return { success: true, version: newVersion };
 }
 
 /**
@@ -329,7 +334,7 @@ export async function updateScoringConfig(
  */
 export async function rescoreAllLeads(
   projectId?: string,
-): Promise<{ rescored: number }> {
+): Promise<{ success: true; rescored: number } | { success: false; error: string }> {
   await requireRole('admin');
   await connectDB();
 
@@ -341,7 +346,7 @@ export async function rescoreAllLeads(
     .lean();
 
   if (!configDoc) {
-    throw new Error('No scoring config found. Save a config first.');
+    return { success: false, error: 'No scoring config found. Save a config first.' };
   }
 
   const config: ScoringConfig = {
@@ -356,7 +361,7 @@ export async function rescoreAllLeads(
   const leads = (await (LeadModel as any).find(leadFilter).lean()) as ILead[];
 
   if (leads.length === 0) {
-    return { rescored: 0 };
+    return { success: true, rescored: 0 };
   }
 
   const now = new Date();
@@ -456,5 +461,5 @@ export async function rescoreAllLeads(
   revalidatePath('/analytics');
   revalidatePath('/admin/scoring');
 
-  return { rescored };
+  return { success: true, rescored };
 }

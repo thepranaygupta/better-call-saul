@@ -10,10 +10,10 @@ import { BandBadge } from '@/components/band-badge';
 // ---------------------------------------------------------------------------
 
 const BAND_FILL: Record<string, string> = {
-  call_now: 'rgba(153, 27, 27, 0.08)',    // red-800
-  qualify: 'rgba(217, 119, 6, 0.08)',      // amber-600
-  nurture: 'rgba(15, 118, 110, 0.08)',     // teal-700
-  cold: 'rgba(168, 162, 158, 0.06)',       // stone-400
+  call_now: 'rgba(153, 27, 27, 0.15)',
+  qualify: 'rgba(217, 119, 6, 0.15)',
+  nurture: 'rgba(15, 118, 110, 0.12)',
+  cold: 'rgba(168, 162, 158, 0.10)',
 };
 
 const DOT_COLOR: Record<string, string> = {
@@ -39,8 +39,8 @@ function QuadrantDot({
 }) {
   // Map scores (0-100) to SVG coordinates.
   // X = fit (0 left, 100 right). Y = intent (0 bottom, 100 top — invert for SVG).
-  const size = 120;
-  const pad = 12;
+  const size = 140;
+  const pad = 16;
   const inner = size - pad * 2;
   const mid = size / 2;
 
@@ -75,12 +75,12 @@ function QuadrantDot({
       {/* Outer border */}
       <rect x={pad} y={pad} width={inner} height={inner} fill="none" stroke="#E7E5E4" strokeWidth={1} />
 
-      {/* Axis labels — tiny uppercase */}
-      <text x={size / 2} y={size - 1} textAnchor="middle" fontSize={7} fill="#78716C" fontFamily="system-ui" letterSpacing="0.08em">
-        FIT
+      {/* Axis labels */}
+      <text x={size / 2} y={size - 2} textAnchor="middle" fontSize={8} fill="#78716C" fontFamily="system-ui" letterSpacing="0.12em" fontWeight="600">
+        FIT →
       </text>
-      <text x={2} y={size / 2} textAnchor="middle" fontSize={7} fill="#78716C" fontFamily="system-ui" letterSpacing="0.08em" transform={`rotate(-90, 2, ${size / 2})`}>
-        INTENT
+      <text x={6} y={size / 2} textAnchor="middle" fontSize={8} fill="#78716C" fontFamily="system-ui" letterSpacing="0.12em" fontWeight="600" transform={`rotate(-90, 6, ${size / 2})`}>
+        INTENT →
       </text>
 
       {/* Lead dot with pulse ring */}

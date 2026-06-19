@@ -365,14 +365,18 @@ export async function getBdasForProject(projectId: string): Promise<ProjectBda[]
 
 export async function assignLeadToBda(
   data: unknown,
-): Promise<{ success: boolean; error?: string; assignedBdaId?: string | null; assignedBdaName?: string | null }> {
+): Promise<{ success: true; assignedBdaId?: string | null; assignedBdaName?: string | null } | { success: false; error: string }> {
   const session = await requireRole('admin', 'sales_lead');
-  const parsed = assignLeadSchema.parse(data);
+
+  const parsed = assignLeadSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  }
 
   await connectDB();
 
   // Verify lead is in the user's project scope
-  const scoped = scopeLeadQueryToUser(session, { _id: parsed.leadId });
+  const scoped = scopeLeadQueryToUser(session, { _id: parsed.data.leadId });
   const lead = await LeadModel.findOne(scoped as any).lean();
   if (!lead) {
     return { success: false, error: 'Lead not found or access denied' };
@@ -380,10 +384,10 @@ export async function assignLeadToBda(
 
   let assignedBdaName: string | null = null;
 
-  if (parsed.bdaId !== null) {
+  if (parsed.data.bdaId !== null) {
     // Verify BDA exists, is active, is a BDA, and is assigned to the same project
     const bda = await UserModel.findOne({
-      _id: parsed.bdaId,
+      _id: parsed.data.bdaId,
       role: 'bda',
       assignedProjectIds: lead.projectId,
     } as any)
@@ -396,22 +400,22 @@ export async function assignLeadToBda(
   }
 
   await (LeadModel as any).findByIdAndUpdate(
-    parsed.leadId,
-    { assignedBdaId: parsed.bdaId ?? null },
+    parsed.data.leadId,
+    { assignedBdaId: parsed.data.bdaId ?? null },
   );
 
-  void logAudit(session.user.id, 'assign_lead', 'lead', parsed.leadId, {
-    bdaId: parsed.bdaId,
+  void logAudit(session.user.id, 'assign_lead', 'lead', parsed.data.leadId, {
+    bdaId: parsed.data.bdaId,
     bdaName: assignedBdaName,
     previousBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
   });
 
   revalidatePath('/queue');
-  revalidatePath(`/leads/${parsed.leadId}`);
+  revalidatePath(`/leads/${parsed.data.leadId}`);
 
   return {
     success: true,
-    assignedBdaId: parsed.bdaId,
+    assignedBdaId: parsed.data.bdaId,
     assignedBdaName,
   };
 }
@@ -422,15 +426,19 @@ export async function assignLeadToBda(
 
 export async function bulkAssignLeads(
   data: unknown,
-): Promise<{ success: boolean; error?: string; count?: number }> {
+): Promise<{ success: true; count?: number } | { success: false; error: string }> {
   const session = await requireRole('admin', 'sales_lead');
-  const parsed = bulkAssignLeadsSchema.parse(data);
+
+  const parsed = bulkAssignLeadsSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  }
 
   await connectDB();
 
   // Verify all leads are in the user's project scope
   const scoped = scopeLeadQueryToUser(session, {
-    _id: { $in: parsed.leadIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    _id: { $in: parsed.data.leadIds.map((id) => new mongoose.Types.ObjectId(id)) },
   });
   const leads = await LeadModel.find(scoped as any)
     .select('_id projectId')
@@ -439,17 +447,17 @@ export async function bulkAssignLeads(
   if (leads.length === 0) {
     return { success: false, error: 'No leads found or access denied' };
   }
-  if (leads.length !== parsed.leadIds.length) {
+  if (leads.length !== parsed.data.leadIds.length) {
     return { success: false, error: 'Some leads not found or access denied' };
   }
 
   // Collect unique project IDs from the leads
   const projectIds = [...new Set(leads.map((l) => String(l.projectId)))];
 
-  if (parsed.bdaId !== null) {
+  if (parsed.data.bdaId !== null) {
     // Verify BDA is assigned to ALL projects that the selected leads belong to
     const bda = await UserModel.findOne({
-      _id: parsed.bdaId,
+      _id: parsed.data.bdaId,
       role: 'bda',
     } as any)
       .select('_id name assignedProjectIds')
@@ -470,14 +478,14 @@ export async function bulkAssignLeads(
 
   // Perform the bulk update
   await (LeadModel as any).updateMany(
-    { _id: { $in: parsed.leadIds.map((id) => new mongoose.Types.ObjectId(id)) } },
-    { assignedBdaId: parsed.bdaId ?? null },
+    { _id: { $in: parsed.data.leadIds.map((id) => new mongoose.Types.ObjectId(id)) } },
+    { assignedBdaId: parsed.data.bdaId ?? null },
   );
 
   // Audit -- fire and forget to avoid slowing down the response
-  for (const leadId of parsed.leadIds) {
+  for (const leadId of parsed.data.leadIds) {
     void logAudit(session.user.id, 'assign_lead', 'lead', leadId, {
-      bdaId: parsed.bdaId,
+      bdaId: parsed.data.bdaId,
       bulk: true,
     });
   }

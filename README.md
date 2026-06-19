@@ -240,31 +240,15 @@ Pagination is already built into the queue view. For very large lead sets, add c
 - **Audit log** for sensitive actions: scoring weight changes, dispositions, lead access.
 - In production: **Sentry** for error tracking and alerting, **OpenTelemetry** for distributed request tracing, MongoDB Atlas monitoring for connection pool health and slow queries.
 
-### PII and India DPDP Act
+### PII Handling
 
-This demo uses synthetic data, no real PII. In a production deployment handling real lead data:
-
-- **Data minimization**: collect only what's needed for scoring and outreach. Don't store chat transcripts longer than required for signal extraction.
-- **Retention policies**: define and enforce TTLs on lead data, activity logs, and AI-generated content. Archive or purge closed leads after a configurable retention window.
-- **Consent and purpose limitation**: leads registered for a masterclass, not for a scoring system. The processing basis needs to be documented (legitimate interest for B2C sales follow-up, with clear opt-out).
-- **Right to erasure**: implement a lead-deletion flow that cascades through activities, extracted signals, score snapshots, call briefs, message drafts, dispositions, and audit logs. Mongoose middleware or a dedicated purge script.
-- **Access controls**: the RBAC system already limits who can view which leads. In production, add IP allowlisting, session timeouts, and MFA for admin accounts.
-- **Cross-border considerations**: if BDAs operate from different states/countries, data residency rules may apply. MongoDB Atlas region selection matters.
+All data in this demo is synthetic. In production, a system like this would need data minimization, retention TTLs, a cascading erasure flow, and documented processing basis under India's DPDP Act. The RBAC layer already restricts who sees which leads; production would add session timeouts, MFA, and IP allowlisting.
 
 ---
 
 ## Where ML Would Slot In
 
-The current scoring engine is a configurable rules-based system with LLM-augmented signal extraction. This is the right starting point: explainable, auditable, and works on day one without training data.
-
-Once ~500-1,000 closed deals accumulate with reliable `outcome` labels:
-
-1. Train a gradient-boosted classifier (XGBoost/LightGBM) on the `contributions[]` feature vector from `ScoreSnapshot` documents, predicting `outcome: enrolled` vs `not_enrolled`.
-2. The model replaces the hand-tuned weights in `ScoringConfig` but keeps the same feature set. The explainability story stays intact (SHAP values map directly to contributions).
-3. The calibration chart already exists to validate the model: compare ML-predicted bands against actual conversion rates.
-4. Run A/B: rules-based scoring on half the floor, ML scoring on the other half. Measure conversion lift.
-
-This is documented here and in the admin UI because honest framing matters. Building a "predictive AI model" on 200 synthetic records and calling it production-ready would be misleading.
+The scoring engine is rules-based by design: explainable, auditable, works on day one. Once ~500+ closed deals accumulate, train a gradient-boosted classifier on the `contributions[]` feature vector, replacing hand-tuned weights while keeping the same explainability story (SHAP values map to contributions). The calibration chart already exists to validate it. Building a "predictive AI model" on synthetic data would be misleading, so we don't.
 
 ---
 

@@ -41,9 +41,9 @@ export default function AuthLayout({
           </div>
 
           <svg
-            width={240}
-            height={220}
-            viewBox="-20 0 220 200"
+            width={260}
+            height={230}
+            viewBox="-40 -5 240 210"
             aria-hidden="true"
           >
             <rect x={0} y={0} width={100} height={100} fill="rgba(217,119,6,0.06)" />
@@ -54,7 +54,7 @@ export default function AuthLayout({
             <line x1={0} y1={100} x2={200} y2={100} stroke="#C8C4BF" strokeWidth={0.75} strokeDasharray="3,3" />
             <rect x={0} y={0} width={200} height={200} fill="none" stroke="#C8C4BF" strokeWidth={1} />
             <text x={100} y={196} textAnchor="middle" fill="#78716C" fontSize={11} fontWeight={500} fontFamily="system-ui, sans-serif">Fit →</text>
-            <text x={6} y={100} textAnchor="middle" fill="#78716C" fontSize={11} fontWeight={500} fontFamily="system-ui, sans-serif" transform="rotate(-90, 6, 100)">Intent →</text>
+            <text x={-12} y={100} textAnchor="middle" fill="#78716C" fontSize={11} fontWeight={500} fontFamily="system-ui, sans-serif" transform="rotate(-90, -12, 100)">Intent →</text>
             {DOTS.map((d, i) => {
               const band = getBand(d.fit, d.intent);
               return (

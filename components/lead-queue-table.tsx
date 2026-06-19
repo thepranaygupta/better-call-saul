@@ -279,7 +279,7 @@ function FilterPill({ label, value, options, onChange }: FilterPillProps) {
       <SelectTrigger
         size="sm"
         className={cn(
-          'h-7 gap-1 rounded-full border px-2.5 text-[11px] font-medium uppercase tracking-wide',
+          'h-7 gap-1 border px-2.5 text-[11px] font-medium uppercase tracking-wide',
           '[&_svg]:size-3',
           isActive
             ? 'border-amber-700/30 bg-amber-50 text-amber-800 hover:bg-amber-100/60'

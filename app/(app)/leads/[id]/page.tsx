@@ -7,6 +7,7 @@ import { CallBriefPanel } from '@/components/call-brief-panel';
 import { MessageDraftPanel } from '@/components/message-draft-panel';
 import { BandBadge } from '@/components/band-badge';
 import type { Band } from '@/components/band-badge';
+import { RecentLeadTracker } from '@/components/recent-lead-tracker';
 import { ChevronLeftIcon } from 'lucide-react';
 import { isAIAvailable } from '@/lib/ai/client';
 import LeadDetailLoading from './loading';
@@ -132,6 +133,9 @@ async function LeadDetailContent({ id }: { id: string }) {
 
   return (
     <>
+      {/* Track this lead visit in localStorage for sidebar "Recent" */}
+      <RecentLeadTracker leadId={id} leadName={lead.name} leadBand={lead.band} />
+
       {/* Lead header */}
       <LeadHeader lead={lead} />
 

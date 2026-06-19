@@ -150,7 +150,7 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
     const bdaUsers = await UserModel.find({
       role: 'bda',
       assignedProjectIds: lead.projectId,
-      active: true,
+      active: { $ne: false },
     } as any)
       .select('_id name')
       .lean()

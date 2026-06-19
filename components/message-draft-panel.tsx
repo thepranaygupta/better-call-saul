@@ -70,9 +70,8 @@ export function MessageDraftPanel({ leadId }: MessageDraftPanelProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(
-          (data as Record<string, string>).error ?? 'Failed to generate draft',
-        );
+        const errMsg = data?.error?.message ?? data?.error ?? 'Failed to generate draft';
+        setError(errMsg);
         return;
       }
 

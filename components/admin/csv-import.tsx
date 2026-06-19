@@ -354,8 +354,8 @@ export function CsvImport({ projects }: CsvImportProps) {
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         throw new Error(
-          errorData?.error ??
-            errorData?.details?.[0]?.message ??
+          errorData?.error?.message ??
+            errorData?.error ??
             `Import failed (${res.status})`,
         );
       }

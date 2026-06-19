@@ -166,25 +166,22 @@ export function ScoringConfigEditor({
   const handleSave = useCallback(() => {
     setSaveMessage(null);
     startSaveTransition(async () => {
-      try {
-        const result = await updateScoringConfig({
-          fitWeights,
-          intentWeights,
-          decayHalfLifeDays,
-          disqualifiers,
-          thresholds,
-        });
-        setCurrentVersion(result.version);
-        setSaveMessage({
-          type: 'success',
-          text: `Saved as version ${result.version}`,
-        });
-      } catch (err) {
-        setSaveMessage({
-          type: 'error',
-          text: err instanceof Error ? err.message : 'Failed to save',
-        });
+      const result = await updateScoringConfig({
+        fitWeights,
+        intentWeights,
+        decayHalfLifeDays,
+        disqualifiers,
+        thresholds,
+      });
+      if (!result.success) {
+        setSaveMessage({ type: 'error', text: result.error });
+        return;
       }
+      setCurrentVersion(result.version);
+      setSaveMessage({
+        type: 'success',
+        text: `Saved as version ${result.version}`,
+      });
     });
   }, [fitWeights, intentWeights, decayHalfLifeDays, disqualifiers, thresholds]);
 
@@ -192,18 +189,15 @@ export function ScoringConfigEditor({
     setRescoreMessage(null);
     setRescoreDialogOpen(false);
     startRescoreTransition(async () => {
-      try {
-        const result = await rescoreAllLeads();
-        setRescoreMessage({
-          type: 'success',
-          text: `Re-scored ${result.rescored} leads`,
-        });
-      } catch (err) {
-        setRescoreMessage({
-          type: 'error',
-          text: err instanceof Error ? err.message : 'Failed to re-score',
-        });
+      const result = await rescoreAllLeads();
+      if (!result.success) {
+        setRescoreMessage({ type: 'error', text: result.error });
+        return;
       }
+      setRescoreMessage({
+        type: 'success',
+        text: `Re-scored ${result.rescored} leads`,
+      });
     });
   }, []);
 

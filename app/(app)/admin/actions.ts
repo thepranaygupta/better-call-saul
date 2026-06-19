@@ -62,7 +62,7 @@ export async function getProjects(): Promise<SerializedProject[]> {
 
 export async function createProject(
   data: unknown,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   await requireRole('admin');
 
   const parsed = createProjectSchema.safeParse(data);
@@ -85,7 +85,7 @@ export async function createProject(
 
 export async function toggleProjectActive(
   projectId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   await requireRole('admin');
   await connectDB();
 
@@ -112,7 +112,7 @@ export async function getUsers(): Promise<SerializedUser[]> {
 
 export async function createUser(
   data: unknown,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const session = await requireRole('admin');
 
   const parsed = createUserSchema.safeParse(data);
@@ -149,7 +149,7 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   data: unknown,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const session = await requireRole('admin');
 
   if (!userId || typeof userId !== 'string') {
@@ -190,7 +190,7 @@ export async function updateUser(
 
 export async function deactivateUser(
   userId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const session = await requireRole('admin');
 
   if (!userId || typeof userId !== 'string') {

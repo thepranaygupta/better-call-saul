@@ -42,15 +42,11 @@ export function LeadAssignDropdown({
     const bdaName = bdaId ? bdas.find((b) => b._id === bdaId)?.name ?? null : null;
 
     startTransition(async () => {
-      try {
-        const result = await assignLeadToBda({ leadId, bdaId });
-        if (result.success) {
-          onAssigned?.(bdaId, bdaName);
-        } else {
-          setError(result.error ?? 'Assignment failed');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Assignment failed');
+      const result = await assignLeadToBda({ leadId, bdaId });
+      if (result.success) {
+        onAssigned?.(bdaId, bdaName);
+      } else {
+        setError(result.error);
       }
     });
   };

@@ -43,13 +43,13 @@ export function BulkAssignBar({
     const bdaId = selectedBda === '__unassign__' ? null : selectedBda;
 
     startTransition(async () => {
-      try {
-        await bulkAssignLeads({ leadIds: selectedLeadIds, bdaId });
-        setSelectedBda('__select__');
-        onAssigned();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bulk assignment failed');
+      const result = await bulkAssignLeads({ leadIds: selectedLeadIds, bdaId });
+      if (!result.success) {
+        setError(result.error);
+        return;
       }
+      setSelectedBda('__select__');
+      onAssigned();
     });
   };
 

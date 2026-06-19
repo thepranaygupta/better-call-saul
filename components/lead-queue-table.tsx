@@ -253,7 +253,7 @@ function DebouncedSearchInput({
           'h-7 w-full border border-stone-200 bg-white pl-8 pr-7 text-[11px] text-stone-950',
           'placeholder:text-stone-400 outline-none transition-colors',
           'focus:border-amber-700/40 focus:ring-1 focus:ring-amber-700/20',
-          'sm:w-[200px]',
+          'sm:w-[280px]',
         )}
       />
       {value.length > 0 && (

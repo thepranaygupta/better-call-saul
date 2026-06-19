@@ -52,6 +52,7 @@ export interface QueueLead {
 export interface QueueBda {
   _id: string;
   name: string;
+  projectIds?: string[];
 }
 
 export interface QueueProject {
@@ -267,7 +268,7 @@ export async function fetchQueueData(
   const projectQuery = scopeQueryToUser(session);
   const allProjects = await ProjectModel.find({
     ...projectQuery,
-    active: true,
+    active: { $ne: false },
   } as any)
     .select('_id name')
     .lean()
@@ -283,13 +284,15 @@ export async function fetchQueueData(
         $in: session.user.assignedProjectIds ?? [],
       };
     }
+    if (!bdaQuery.active) bdaQuery.active = { $ne: false };
     const bdaUsers = await UserModel.find(bdaQuery as any)
-      .select('_id name')
+      .select('_id name assignedProjectIds')
       .lean()
       .exec();
-    bdas = bdaUsers.map((u: { _id: unknown; name: string }) => ({
+    bdas = bdaUsers.map((u: { _id: unknown; name: string; assignedProjectIds?: unknown[] }) => ({
       _id: String(u._id),
       name: u.name,
+      projectIds: (u.assignedProjectIds ?? []).map(String),
     }));
   }
 

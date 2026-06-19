@@ -63,8 +63,9 @@ export function CallBriefPanel({ leadId, isAIAvailable: aiAvailable }: CallBrief
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(data.error ?? `Request failed (${res.status})`);
+        const data = await res.json().catch(() => ({}));
+        const errMsg = data?.error?.message ?? data?.error ?? `Request failed (${res.status})`;
+        throw new Error(errMsg);
       }
 
       const data = await res.json();

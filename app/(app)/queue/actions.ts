@@ -55,6 +55,14 @@ export interface QueueProject {
   name: string;
 }
 
+export interface BandCounts {
+  call_now: number;
+  qualify: number;
+  nurture: number;
+  cold: number;
+  disqualified: number;
+}
+
 export interface QueueData {
   leads: QueueLead[];
   projects: QueueProject[];
@@ -63,6 +71,7 @@ export interface QueueData {
   page: number;
   totalPages: number;
   currentUserRole: 'admin' | 'sales_lead' | 'bda';
+  bandCounts: BandCounts;
 }
 
 export async function fetchQueueData(
@@ -173,6 +182,30 @@ export async function fetchQueueData(
   const totalCount = await LeadModel.countDocuments(leadFilter as any);
   const totalPages = Math.max(1, Math.ceil(totalCount / LEADS_PER_PAGE));
   const safePage = Math.min(Math.max(1, page), totalPages);
+
+  // Band counts for summary strip (uses the same RBAC-scoped base query, ignoring band filter)
+  const bandCountFilter = { ...baseQuery };
+  // Copy filters except band so counts reflect the full workload
+  if (filters.projectId && filters.projectId !== 'all') {
+    bandCountFilter.projectId = filters.projectId;
+  }
+  if (filters.sourceChannel && filters.sourceChannel !== 'all') {
+    bandCountFilter.sourceChannel = filters.sourceChannel;
+  }
+  if (filters.assignedBdaId && filters.assignedBdaId !== 'all') {
+    bandCountFilter.assignedBdaId = filters.assignedBdaId;
+  }
+  const bandAgg = await LeadModel.aggregate([
+    { $match: bandCountFilter },
+    { $group: { _id: '$band', count: { $sum: 1 } } },
+  ]).exec();
+  const bandCounts: BandCounts = { call_now: 0, qualify: 0, nurture: 0, cold: 0, disqualified: 0 };
+  for (const entry of bandAgg) {
+    const band = entry._id as string;
+    if (band in bandCounts) {
+      bandCounts[band as keyof BandCounts] = entry.count as number;
+    }
+  }
 
   // Fetch all matching leads to sort by band priority + intent in JS.
   // MongoDB lacks a native custom-order sort, so we pull all matches
@@ -293,5 +326,6 @@ export async function fetchQueueData(
     page: safePage,
     totalPages,
     currentUserRole: session.user.role,
+    bandCounts,
   };
 }

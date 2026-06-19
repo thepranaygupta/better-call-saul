@@ -29,9 +29,8 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ChevronsUpDownIcon,
-  PhoneIcon,
 } from 'lucide-react';
-import type { QueueData, QueueLead } from '@/app/(app)/queue/actions';
+import type { BandCounts, QueueData, QueueLead } from '@/app/(app)/queue/actions';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -126,7 +125,7 @@ function IntentScoreCell({ score }: { score: number }) {
   return (
     <span
       className={cn(
-        'font-mono text-[13px] font-semibold tabular-nums',
+        'font-mono text-[15px] font-bold tabular-nums',
         intentScoreColor(score),
       )}
     >
@@ -147,6 +146,54 @@ function SortIndicator({ sorted }: { sorted: false | 'asc' | 'desc' }) {
     return <ArrowDownIcon className="ml-1 inline size-3 text-amber-700" />;
   }
   return <ChevronsUpDownIcon className="ml-1 inline size-3 text-stone-300" />;
+}
+
+// ---------------------------------------------------------------------------
+// Band count summary strip -- instant workload read
+// ---------------------------------------------------------------------------
+
+const BAND_COUNT_CONFIG: { key: keyof BandCounts; label: string; dotColor: string; textColor: string }[] = [
+  { key: 'call_now', label: 'Call Now', dotColor: 'bg-red-800', textColor: 'text-red-800' },
+  { key: 'qualify', label: 'Qualify', dotColor: 'bg-amber-600', textColor: 'text-amber-600' },
+  { key: 'nurture', label: 'Nurture', dotColor: 'bg-teal-700', textColor: 'text-teal-700' },
+  { key: 'cold', label: 'Cold', dotColor: 'bg-stone-400', textColor: 'text-stone-400' },
+  { key: 'disqualified', label: 'DQ', dotColor: 'bg-stone-300', textColor: 'text-stone-300' },
+];
+
+function BandCountStrip({
+  counts,
+  onBandClick,
+  activeBand,
+}: {
+  counts: BandCounts;
+  onBandClick: (band: string) => void;
+  activeBand: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      {BAND_COUNT_CONFIG.map(({ key, label, dotColor, textColor }) => {
+        const count = counts[key];
+        if (count === 0 && key === 'disqualified') return null;
+        const isActive = activeBand === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onBandClick(isActive ? 'all' : key)}
+            className={cn(
+              'flex items-center gap-1.5 text-[12px] font-medium tabular-nums transition-colors',
+              isActive
+                ? cn(textColor, 'underline underline-offset-2')
+                : 'text-stone-500 hover:text-stone-700',
+            )}
+          >
+            <span className={cn('inline-block size-2 rounded-full', dotColor)} />
+            <span className="font-bold">{count}</span>
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -265,7 +312,7 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
       accessorKey: 'name',
       header: 'Lead',
       enableSorting: true,
-      size: 200,
+      size: 240,
       cell: ({ row }) => (
         <Link
           href={`/leads/${row.original._id}`}
@@ -281,27 +328,22 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
       ),
     },
     {
-      accessorKey: 'phone',
-      header: 'Phone',
-      enableSorting: false,
-      size: 120,
-      cell: ({ row }) => (
-        <a
-          href={`tel:${row.original.phone}`}
-          className="inline-flex items-center gap-1 text-xs tabular-nums text-stone-600 hover:text-amber-700"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <PhoneIcon className="size-3 text-stone-400" />
-          {row.original.phone}
-        </a>
-      ),
-    },
-    {
       accessorKey: 'intentScore',
       header: 'Intent',
       enableSorting: true,
-      size: 60,
+      size: 70,
       cell: ({ row }) => <IntentScoreCell score={row.original.intentScore} />,
+    },
+    {
+      accessorKey: 'fitScore',
+      header: 'Fit',
+      enableSorting: true,
+      size: 50,
+      cell: ({ row }) => (
+        <span className={cn('font-mono text-[12px] tabular-nums', intentScoreColor(row.original.fitScore))}>
+          {String(row.original.fitScore).padStart(2, '0')}
+        </span>
+      ),
     },
     {
       accessorKey: 'band',
@@ -325,17 +367,6 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
       ),
     },
     {
-      accessorKey: 'city',
-      header: 'City',
-      enableSorting: true,
-      size: 100,
-      cell: ({ row }) => (
-        <span className="text-xs text-stone-500">
-          {row.original.city ?? '--'}
-        </span>
-      ),
-    },
-    {
       accessorKey: 'sourceChannel',
       header: 'Source',
       enableSorting: true,
@@ -345,20 +376,6 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
           {SOURCE_LABELS[row.original.sourceChannel] ?? row.original.sourceChannel}
         </span>
       ),
-    },
-    {
-      accessorKey: 'outcome',
-      header: 'Outcome',
-      enableSorting: true,
-      size: 80,
-      cell: ({ row }) => {
-        const cfg = OUTCOME_CONFIG[row.original.outcome] ?? { label: 'Open', color: 'text-amber-600' };
-        return (
-          <span className={cn('text-xs font-medium', cfg.color)}>
-            {cfg.label}
-          </span>
-        );
-      },
     },
     {
       accessorKey: 'lastActivityAt',
@@ -497,8 +514,27 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
 
   return (
     <div className="space-y-2">
+      {/* ── Band count summary + lead count ──────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-2">
+        <BandCountStrip
+          counts={data.bandCounts}
+          onBandClick={handleFilterChange('band')}
+          activeBand={currentBand}
+        />
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium tabular-nums text-stone-400">
+            {data.totalCount} lead{data.totalCount !== 1 ? 's' : ''}
+          </span>
+          {activeFilterCount > 0 && (
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-700/70">
+              {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* ── Filter toolbar ────────────────────────────────── */}
-      <div className="flex flex-col gap-2 border-b border-stone-200 pb-2">
+      <div className="flex flex-col gap-2 pb-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <DebouncedSearchInput
             key={currentSearch}
@@ -554,30 +590,18 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
             </>
           )}
         </div>
-
-        {/* Status line */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium tabular-nums text-stone-400">
-            {data.totalCount} lead{data.totalCount !== 1 ? 's' : ''}
-          </span>
-          {activeFilterCount > 0 && (
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-700/70">
-              {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* ── Empty state ───────────────────────────────────── */}
       {data.leads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center border border-dashed border-stone-300 py-20">
+        <div className="flex flex-col items-center justify-center border border-dashed border-stone-300 py-16">
           <p className="text-sm font-medium text-stone-950">
-            {activeFilterCount > 0 ? 'No leads match filters' : 'No leads assigned'}
+            {activeFilterCount > 0 ? 'No leads match these filters' : 'No leads in your queue'}
           </p>
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 max-w-sm text-center text-xs text-stone-500">
             {activeFilterCount > 0
-              ? 'Try adjusting your filters or clearing them.'
-              : 'Leads will appear here once they are assigned to your projects.'}
+              ? 'Try broadening your search or removing a filter to see more leads.'
+              : 'Leads will appear once they are assigned to your projects. Contact your Sales Lead or Admin if you expect to see leads here.'}
           </p>
           {activeFilterCount > 0 && (
             <button
@@ -602,7 +626,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                     >
                       {headerGroup.headers.map((header) => {
                         const isRightAligned =
-                          header.id === 'intentScore' || header.id === 'lastActivityAt';
+                          header.id === 'intentScore' || header.id === 'fitScore' || header.id === 'lastActivityAt';
                         return (
                           <th
                             key={header.id}
@@ -644,8 +668,11 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                     <tr
                       key={row.id}
                       className={cn(
-                        'h-[44px] border-b border-stone-100 border-l-4 transition-colors hover:bg-stone-100',
+                        'h-[44px] border-b border-stone-100 border-l-4 transition-colors',
                         BAND_BORDER_COLORS[row.original.band as Band],
+                        row.original.band === 'call_now'
+                          ? 'bg-red-50/40 hover:bg-red-50/70'
+                          : 'hover:bg-stone-100',
                         row.original.band === 'disqualified' && 'opacity-50',
                       )}
                     >
@@ -655,6 +682,7 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                           className={cn(
                             'px-2',
                             (cell.column.id === 'intentScore' ||
+                              cell.column.id === 'fitScore' ||
                               cell.column.id === 'lastActivityAt') &&
                               'text-right',
                           )}
@@ -679,8 +707,11 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
                 key={row.id}
                 href={`/leads/${row.original._id}`}
                 className={cn(
-                  'flex items-center justify-between border-b border-stone-100 border-l-4 px-3 py-2 transition-colors hover:bg-stone-100',
+                  'flex items-center justify-between border-b border-stone-100 border-l-4 px-3 py-2 transition-colors',
                   BAND_BORDER_COLORS[row.original.band as Band],
+                  row.original.band === 'call_now'
+                    ? 'bg-red-50/40 hover:bg-red-50/70'
+                    : 'hover:bg-stone-100',
                   row.original.band === 'disqualified' && 'opacity-50',
                 )}
               >

@@ -1,5 +1,6 @@
 'use server';
 
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db/connection';
 import { LeadModel, ProjectModel, ActivityModel, UserModel } from '@/lib/db/models';
 import { requireAuth, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
@@ -183,20 +184,15 @@ export async function fetchQueueData(
   const totalPages = Math.max(1, Math.ceil(totalCount / LEADS_PER_PAGE));
   const safePage = Math.min(Math.max(1, page), totalPages);
 
-  // Band counts for summary strip (uses the same RBAC-scoped base query, ignoring band filter)
-  const bandCountFilter = { ...baseQuery };
-  // Copy filters except band so counts reflect the full workload
-  if (filters.projectId && filters.projectId !== 'all') {
-    bandCountFilter.projectId = filters.projectId;
-  }
-  if (filters.sourceChannel && filters.sourceChannel !== 'all') {
-    bandCountFilter.sourceChannel = filters.sourceChannel;
-  }
-  if (filters.assignedBdaId && filters.assignedBdaId !== 'all') {
-    bandCountFilter.assignedBdaId = filters.assignedBdaId;
+  // Band counts for summary strip — uses RBAC scope only (no user filters)
+  // Aggregate needs ObjectIds (Mongoose .find() auto-casts, aggregate doesn't)
+  const bandMatchQuery = { ...baseQuery };
+  if (bandMatchQuery.projectId && typeof bandMatchQuery.projectId === 'object' && '$in' in (bandMatchQuery.projectId as Record<string, unknown>)) {
+    const ids = (bandMatchQuery.projectId as { $in: string[] }).$in;
+    bandMatchQuery.projectId = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
   }
   const bandAgg = await LeadModel.aggregate([
-    { $match: bandCountFilter },
+    { $match: bandMatchQuery },
     { $group: { _id: '$band', count: { $sum: 1 } } },
   ]).exec();
   const bandCounts: BandCounts = { call_now: 0, qualify: 0, nurture: 0, cold: 0, disqualified: 0 };

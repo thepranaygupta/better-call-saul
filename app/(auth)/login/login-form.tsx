@@ -1,13 +1,39 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { loginAction } from './actions';
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(loginAction, null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/queue';
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(null);
+
+    const form = new FormData(e.currentTarget);
+
+    const result = await signIn('credentials', {
+      email: form.get('email') as string,
+      password: form.get('password') as string,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError('Invalid email or password.');
+      setPending(false);
+      return;
+    }
+
+    window.location.href = callbackUrl;
+  }
 
   return (
     <div className="w-full max-w-[340px]">
@@ -21,13 +47,13 @@ export function LoginForm() {
       </div>
 
       <div className="border border-stone-200 bg-white p-5">
-        <form action={formAction} className="flex flex-col gap-4">
-          {state?.error && (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" autoComplete="on" method="post">
+          {error && (
             <div
               role="alert"
               className="border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700"
             >
-              {state.error}
+              {error}
             </div>
           )}
 
@@ -44,7 +70,7 @@ export function LoginForm() {
               type="email"
               placeholder="you@example.com"
               required
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
               className="h-9 text-[13px]"
             />
@@ -69,10 +95,10 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="mt-1 h-9 w-full rounded-none bg-amber-700 text-[13px] font-medium text-white hover:bg-amber-800"
-            disabled={isPending}
+            className="mt-1 h-9 w-full bg-amber-700 text-[13px] font-medium text-white hover:bg-amber-800"
+            disabled={pending}
           >
-            {isPending ? 'Signing in...' : 'Sign in'}
+            {pending ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
       </div>

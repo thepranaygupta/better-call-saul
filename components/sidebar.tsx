@@ -130,7 +130,7 @@ function NextLeadButton({ nextLead }: { nextLead: NextLeadInfo | null }) {
     return (
       <button
         disabled
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-stone-200 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400"
+        className="flex w-full items-center justify-center gap-2 bg-stone-200 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400"
       >
         No hot leads
       </button>
@@ -140,7 +140,7 @@ function NextLeadButton({ nextLead }: { nextLead: NextLeadInfo | null }) {
   return (
     <button
       onClick={() => router.push(`/leads/${nextLead.id}`)}
-      className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-700 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-white transition-colors hover:bg-amber-800 active:bg-amber-900"
+      className="flex w-full items-center justify-center gap-2 bg-amber-700 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-white transition-colors hover:bg-amber-800 active:bg-amber-900"
     >
       Next Lead
       <ArrowRightIcon className="size-3.5" />
@@ -253,7 +253,7 @@ function NavContent({
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors',
+                'flex items-center gap-3 px-3 py-2 text-xs font-medium uppercase tracking-widest transition-colors',
                 isActive
                   ? 'bg-amber-700 text-white'
                   : 'text-stone-500 hover:bg-stone-100 hover:text-stone-950',
@@ -283,7 +283,7 @@ function NavContent({
           <div>
             <div
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium uppercase tracking-widest',
+                'flex items-center gap-3 px-3 py-2 text-xs font-medium uppercase tracking-widest',
                 adminActive
                   ? 'bg-amber-700 text-white'
                   : 'text-stone-500',

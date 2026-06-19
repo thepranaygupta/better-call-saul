@@ -558,35 +558,121 @@ async function seed() {
       totalSnapshots++;
 
       // --- Dispositions (for leads that were contacted) ---
-      if (bda && (outcome === 'enrolled' || (attendanceType === 'attended_live' && seededRandom() < 0.4))) {
+      // Broader criteria: enrolled leads always get a disposition; attended_live
+      // leads have a 55% chance; watched_replay leads 20%; others 5%.
+      // This produces ~40-50 dispositions across all leads.
+      const shouldDisposition = bda && (
+        outcome === 'enrolled'
+        || (attendanceType === 'attended_live' && seededRandom() < 0.55)
+        || (attendanceType === 'watched_replay' && seededRandom() < 0.20)
+        || (attendanceType === 'no_show' && seededRandom() < 0.05)
+      );
+
+      if (shouldDisposition) {
+        // Pick outcome: enrolled leads get 'enrolled'; others get a weighted mix
+        // that includes every Disposition outcome type
         const dispOutcome = outcome === 'enrolled'
           ? 'enrolled' as const
           : pickWeighted(
-              ['connected', 'not_connected', 'callback_scheduled', 'not_interested'] as const,
-              [40, 25, 20, 15],
+              ['connected', 'not_connected', 'callback_scheduled', 'not_interested', 'wrong_number'] as const,
+              [30, 20, 18, 15, 17],
             );
-        const dispTime = hoursAfter(mc.scheduledAt, randomInt(2, 48));
 
-        const notesOptions = [
-          'Spoke for 15 mins, interested in premium plan',
-          'Busy, asked to call back tomorrow',
-          'Very enthusiastic, needs EMI details',
-          'Comparing with other courses, will decide by weekend',
-          'Phone was switched off',
-          'Enrolled on the call after explaining value',
-          'Not the right time, maybe next quarter',
-          'Asked about batch timing and weekend options',
-        ];
+        // Determine timestamp: roughly 30% of dispositions happen "today" so the
+        // sidebar calledToday counter is non-zero. The rest spread over the past
+        // few days relative to the masterclass.
+        const todayMidnight = new Date(now);
+        todayMidnight.setHours(0, 0, 0, 0);
+
+        let dispTime: Date;
+        if (seededRandom() < 0.30) {
+          // Today: random hour between 9am and current hour (capped at 6pm)
+          const hour = randomInt(9, Math.min(now.getHours() || 10, 18));
+          dispTime = new Date(todayMidnight);
+          dispTime.setHours(hour, randomInt(0, 59), randomInt(0, 59), 0);
+        } else {
+          // Past: 2-96 hours after the masterclass (lands 1-4 days ago)
+          dispTime = hoursAfter(mc.scheduledAt, randomInt(2, 96));
+        }
+
+        // Outcome-specific notes for realism
+        const notesByOutcome: Record<string, string[]> = {
+          connected: [
+            'Spoke for 15 mins, interested in premium plan',
+            'Very enthusiastic, needs EMI details',
+            'Comparing with other courses, will decide by weekend',
+            'Asked about batch timing and weekend options',
+            'Interested in EMI plan, will call back Thursday',
+            'Wants to discuss with spouse before committing',
+            'Good conversation, sending brochure on WhatsApp',
+            'Keen on the course, asked about group discounts for team',
+          ],
+          not_connected: [
+            'Phone was switched off, will retry tomorrow',
+            'Call went to voicemail, left a message',
+            'Rang but no answer, third attempt',
+            'Network busy, try alternate number',
+            'Phone not reachable, marked for evening retry',
+          ],
+          callback_scheduled: [
+            'Busy in meeting, call back at 4pm',
+            'Interested but at work, requested call after 7pm',
+            'Wants to check finances first, call next Monday',
+            'Currently travelling, call back in 2 days',
+            'Asked for pricing doc first, follow up Thursday',
+            'Running late for a meeting, reschedule for tomorrow 11am',
+          ],
+          not_interested: [
+            'Already enrolled in a competitor course',
+            'Budget constraints this quarter',
+            'Not the right time, maybe next quarter',
+            'Content not relevant to their field',
+            'Too expensive, no EMI option works for them',
+          ],
+          enrolled: [
+            'Enrolled on the call after explaining value',
+            'Chose the 3-month EMI option, payment confirmed',
+            'Enrolled immediately, very excited about the course',
+            'Signed up for premium plan with certificate',
+            'Converted after addressing refund policy concerns',
+          ],
+          wrong_number: [
+            'Wrong number, try alternate',
+            'Number belongs to someone else, not the registrant',
+            'Business landline, person not available',
+            'Number disconnected',
+          ],
+        };
+
+        const notes = pick(notesByOutcome[dispOutcome] ?? ['Follow-up required']);
+
+        // For callback_scheduled, set nextActionAt 12-72 hours from the disposition
+        const nextActionAt = dispOutcome === 'callback_scheduled'
+          ? hoursAfter(dispTime, randomInt(12, 72))
+          : undefined;
 
         await DispositionModel.create({
           leadId: lead._id,
-          bdaId: bda._id,
+          bdaId: bda!._id,
           outcome: dispOutcome,
-          notes: pick(notesOptions),
-          nextActionAt: dispOutcome === 'callback_scheduled' ? hoursAfter(dispTime, randomInt(12, 72)) : undefined,
+          notes,
+          nextActionAt,
           createdAt: dispTime,
         });
         totalDispositions++;
+
+        // Sync Lead.outcome for dispositions that imply a final state
+        if (dispOutcome === 'enrolled' && outcome !== 'enrolled') {
+          await (LeadModel as any).updateOne(
+            { _id: lead._id },
+            { $set: { outcome: 'enrolled' } },
+          );
+        } else if (dispOutcome === 'not_interested' && outcome === 'undecided') {
+          await (LeadModel as any).updateOne(
+            { _id: lead._id },
+            { $set: { outcome: 'not_enrolled' } },
+          );
+        }
       }
     }
   }
@@ -619,6 +705,24 @@ async function seed() {
   for (const o of outcomeCounts) {
     console.log(`    ${o._id}: ${o.count}`);
   }
+
+  // Disposition breakdown by outcome
+  const dispCounts = await DispositionModel.aggregate([
+    { $group: { _id: '$outcome', count: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+  ]);
+  console.log('\n  Disposition outcome breakdown:');
+  for (const d of dispCounts) {
+    console.log(`    ${d._id}: ${d.count}`);
+  }
+
+  // Today's dispositions (what the sidebar calledToday counter will show)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayDispCount = await DispositionModel.countDocuments({
+    createdAt: { $gte: todayStart },
+  });
+  console.log(`\n  Dispositions with today's date: ${todayDispCount}`);
 
   await mongoose.disconnect();
   console.log('\nDone. Database seeded successfully.');

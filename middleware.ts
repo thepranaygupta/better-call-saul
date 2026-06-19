@@ -26,8 +26,15 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = pathname === '/login';
   const isLandingPage = pathname === '/';
 
+  // Role-based landing: admins go to /analytics, everyone else to /queue
   if (isAuthenticated && (isLoginPage || isLandingPage)) {
-    return NextResponse.redirect(new URL('/queue', request.url));
+    const dest = token?.role === 'admin' ? '/analytics' : '/queue';
+    return NextResponse.redirect(new URL(dest, request.url));
+  }
+
+  // Admins should not land on the BDA call queue
+  if (isAuthenticated && pathname === '/queue' && token?.role === 'admin') {
+    return NextResponse.redirect(new URL('/analytics', request.url));
   }
 
   if (!isAuthenticated && !isLoginPage && !isLandingPage) {

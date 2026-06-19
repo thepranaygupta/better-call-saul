@@ -384,3 +384,135 @@ export async function logDisposition(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// rescoreLead — re-fetch activities + signals, re-run scoreLead, persist
+// ---------------------------------------------------------------------------
+
+export async function rescoreLead(
+  leadId: string,
+): Promise<{ success: true; band?: string; fitScore?: number; intentScore?: number } | { success: false; error: string }> {
+  const session = await requireAuth();
+
+  if (!leadId || typeof leadId !== 'string') {
+    return { success: false, error: 'Invalid lead ID' };
+  }
+
+  await connectDB();
+
+  // RBAC: verify lead belongs to user's scope
+  const scoped = scopeLeadQueryToUser(session, { _id: leadId });
+  const lead = await LeadModel.findOne(scoped as any).lean();
+  if (!lead) return { success: false, error: 'Lead not found or access denied' };
+
+  const leadIdStr = String(lead._id);
+
+  // Fetch activities and signals
+  const [activities, signals, masterclass] = await Promise.all([
+    ActivityModel.find({ leadId: leadIdStr } as any)
+      .sort({ occurredAt: -1 })
+      .lean()
+      .exec() as Promise<IActivity[]>,
+    ExtractedSignalModel.find({ leadId: leadIdStr } as any)
+      .lean()
+      .exec() as Promise<IExtractedSignal[]>,
+    (MasterclassModel as any).findById(lead.masterclassId).lean().exec(),
+  ]);
+
+  // Load scoring config (project-specific or default)
+  const dbConfig = await ScoringConfigModel.findOne({
+    projectId: lead.projectId,
+  } as any)
+    .sort({ version: -1 })
+    .lean()
+    .exec();
+
+  const config = dbConfig
+    ? {
+        fitWeights: dbConfig.fitWeights as Record<string, number>,
+        intentWeights: dbConfig.intentWeights as Record<string, number>,
+        decayHalfLifeDays: dbConfig.decayHalfLifeDays,
+        disqualifiers: dbConfig.disqualifiers,
+        thresholds: dbConfig.thresholds,
+      }
+    : DEFAULT_SCORING_CONFIG;
+
+  const leadInput = {
+    occupationType: lead.occupationType as
+      | 'working_professional'
+      | 'student'
+      | 'other',
+    seniority: (lead.seniority ?? 'unknown') as
+      | 'junior'
+      | 'mid'
+      | 'senior'
+      | 'unknown',
+    sourceChannel: lead.sourceChannel as
+      | 'referral'
+      | 'email'
+      | 'paid_search'
+      | 'paid_social'
+      | 'organic'
+      | 'other',
+    isExistingCustomer: lead.isExistingCustomer,
+    email: lead.email,
+    masterclassPitchStartMinute: masterclass?.pitchStartMinute,
+    masterclassDurationMinutes: masterclass?.durationMinutes,
+  };
+
+  const activityInputs = activities.map((a: IActivity) => ({
+    type: a.type as ActivityType,
+    numericValue: a.numericValue,
+    occurredAt: new Date(a.occurredAt),
+  }));
+
+  const signalInputs = signals.map((s: IExtractedSignal) => ({
+    signalType: s.signalType as SignalType,
+    polarity: s.polarity as 'positive' | 'negative' | 'neutral',
+    confidence: s.confidence,
+    extractedAt: new Date(s.extractedAt),
+  }));
+
+  const now = new Date();
+  const result = scoreLead(
+    leadInput,
+    activityInputs,
+    signalInputs,
+    config,
+    now,
+  );
+
+  // Persist the new snapshot
+  await ScoreSnapshotModel.create({
+    leadId: leadIdStr,
+    fitScore: result.fitScore,
+    intentScore: result.intentScore,
+    band: result.band,
+    contributions: result.contributions,
+    computedAt: now,
+  });
+
+  // Update the lead document with fresh scores
+  await (LeadModel as any).findByIdAndUpdate(leadIdStr, {
+    fitScore: result.fitScore,
+    intentScore: result.intentScore,
+    band: result.band,
+    lastScoredAt: now,
+  });
+
+  await logAudit(session.user.id, 'rescore_lead', 'lead', leadIdStr, {
+    fitScore: result.fitScore,
+    intentScore: result.intentScore,
+    band: result.band,
+  });
+
+  revalidatePath(`/leads/${leadIdStr}`);
+  revalidatePath('/queue');
+
+  return {
+    success: true,
+    band: result.band,
+    fitScore: result.fitScore,
+    intentScore: result.intentScore,
+  };
+}

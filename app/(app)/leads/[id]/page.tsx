@@ -9,6 +9,7 @@ import { BandBadge } from '@/components/band-badge';
 import type { Band } from '@/components/band-badge';
 import { RecentLeadTracker } from '@/components/recent-lead-tracker';
 import { LeadDetailAssign } from '@/components/lead-detail-assign';
+import { ExtractRescoreButton } from '@/components/extract-rescore-button';
 import { ChevronLeftIcon } from 'lucide-react';
 import { isAIAvailable } from '@/lib/ai/client';
 import LeadDetailLoading from './loading';
@@ -135,6 +136,7 @@ async function LeadDetailContent({ id }: { id: string }) {
   const { lead, activities, signals, dispositions, snapshot, availableBdas, currentUserRole } = data;
   const aiReady = isAIAvailable();
   const canAssign = currentUserRole === 'admin' || currentUserRole === 'sales_lead';
+  const hasChatMessages = activities.some((a) => a.type === 'chat_message' && a.text);
 
   return (
     <>
@@ -176,6 +178,12 @@ async function LeadDetailContent({ id }: { id: string }) {
             intentScore={snapshot?.intentScore ?? lead.intentScore}
             band={snapshot?.band ?? lead.band}
             contributions={snapshot?.contributions ?? []}
+          />
+
+          <ExtractRescoreButton
+            leadId={id}
+            hasChatMessages={hasChatMessages}
+            aiAvailable={aiReady}
           />
 
           <CallBriefPanel leadId={id} isAIAvailable={aiReady} />

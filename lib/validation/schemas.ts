@@ -87,6 +87,7 @@ export const bulkLeadSchema = z.object({
     'other',
   ]),
   isExistingCustomer: z.boolean().optional().default(false),
+  chatMessage: z.string().max(2000).optional(),
 });
 export type BulkLeadInput = z.infer<typeof bulkLeadSchema>;
 

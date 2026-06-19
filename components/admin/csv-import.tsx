@@ -29,6 +29,7 @@ import {
   CheckCircle2Icon,
   AlertCircleIcon,
   LoaderIcon,
+  DownloadIcon,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,8 @@ const LEAD_FIELDS = [
   'city',
   'sourceChannel',
   'jobTitle',
+  'isExistingCustomer',
+  'chatMessage',
 ] as const;
 type LeadField = (typeof LEAD_FIELDS)[number];
 
@@ -63,6 +66,15 @@ const HEADER_ALIASES: Record<string, LeadField> = {
   source_channel: 'sourceChannel',
   job_title: 'jobTitle',
   jobtitle: 'jobTitle',
+  existing_customer: 'isExistingCustomer',
+  existingcustomer: 'isExistingCustomer',
+  is_existing_customer: 'isExistingCustomer',
+  returning: 'isExistingCustomer',
+  chatmessage: 'chatMessage',
+  chat_message: 'chatMessage',
+  chat: 'chatMessage',
+  message: 'chatMessage',
+  qa_text: 'chatMessage',
 };
 
 const FIELD_LABELS: Record<LeadField, string> = {
@@ -74,6 +86,8 @@ const FIELD_LABELS: Record<LeadField, string> = {
   city: 'City',
   sourceChannel: 'Source Channel',
   jobTitle: 'Job Title',
+  isExistingCustomer: 'Existing Customer',
+  chatMessage: 'Chat Message',
 };
 
 interface ImportError {
@@ -307,12 +321,19 @@ export function CsvImport({ projects }: CsvImportProps) {
         masterclassId: selectedMasterclassId,
       };
 
+      let chatMessage = '';
       for (let colIdx = 0; colIdx < columnMapping.length; colIdx++) {
         const field = columnMapping[colIdx];
         if (field && colIdx < row.length) {
           const cellValue = (row[colIdx] ?? '').trim();
           if (cellValue) {
-            lead[field] = cellValue;
+            if (field === 'chatMessage') {
+              chatMessage = cellValue;
+            } else if (field === 'isExistingCustomer') {
+              lead[field] = ['true', 'yes', '1'].includes(cellValue.toLowerCase());
+            } else {
+              lead[field] = cellValue;
+            }
           }
         }
       }
@@ -327,8 +348,14 @@ export function CsvImport({ projects }: CsvImportProps) {
         if (!lead.sourceChannel) {
           lead.sourceChannel = 'other';
         }
-        // isExistingCustomer defaults to false
-        lead.isExistingCustomer = false;
+        if (lead.isExistingCustomer === undefined) {
+          lead.isExistingCustomer = false;
+        }
+
+        // Attach chatMessage as a separate field for the API
+        if (chatMessage) {
+          lead.chatMessage = chatMessage;
+        }
 
         leads.push(lead);
       }
@@ -496,9 +523,18 @@ export function CsvImport({ projects }: CsvImportProps) {
                   Drag & drop your CSV file here
                 </p>
                 <p className="text-[11px] text-stone-500">
-                  or click to browse. Expects columns: name, email, phone, occupation, seniority, city, source, job_title
+                  or click to browse. Expects columns: name, email, phone, occupation, seniority, city, source, job_title, chat_message
                 </p>
               </div>
+              <a
+                href="/demo-import.csv"
+                download="demo-import.csv"
+                className="inline-flex items-center gap-1 text-[11px] text-amber-700 underline underline-offset-2 hover:text-amber-800 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DownloadIcon className="size-3" aria-hidden />
+                Download sample CSV with chat messages
+              </a>
               <input
                 ref={fileInputRef}
                 type="file"

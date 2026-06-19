@@ -1,0 +1,7 @@
+name,email,phone,occupationType,seniority,city,sourceChannel,jobTitle,isExistingCustomer,chatMessage
+Priya Sharma,priya.sharma@outlook.com,+919876543210,working_professional,mid,Mumbai,referral,Marketing Manager,false,"What are the EMI options available? Can I pay in 3 installments?"
+Rahul Verma,rahul.verma@gmail.com,+919812345678,working_professional,senior,Delhi,email,VP Engineering,false,"I want to switch from backend to product management. Will this course help me make that transition? What kind of placement support do you offer?"
+Anita Desai,anita.desai@yahoo.co.in,+919898765432,working_professional,junior,Bangalore,paid_social,Business Analyst,false,"What is the total price? Is there a refund policy if I don't find value in the first week?"
+Vikram Patel,vikram.patel@hotmail.com,+919845612378,student,,Pune,organic,,false,"This looks very interesting! I'm super excited about the AI tools module. When does the next batch start? I've already told three of my friends about this!"
+Meera Krishnan,meera.k@techcorp.in,+919901234567,working_professional,mid,Hyderabad,paid_search,Data Scientist,true,"How much time commitment per week? I work 50+ hours already. Also saw that UpGrad has a similar course, how is yours different?"
+Arjun Reddy,arjun.reddy@gmail.com,+919776543210,working_professional,junior,Chennai,organic,Software Developer,false,

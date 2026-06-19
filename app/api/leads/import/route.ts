@@ -261,6 +261,28 @@ export async function POST(req: NextRequest) {
 
       await (ActivityModel as any).insertMany(activityDocs);
 
+      // Create "chat_message" activities for leads that have chat messages
+      const chatActivityDocs: Array<{
+        leadId: unknown;
+        type: 'chat_message';
+        text: string;
+        occurredAt: Date;
+      }> = [];
+      for (let j = 0; j < createdLeads.length; j++) {
+        const originalInput = chunk[j]!.lead;
+        if (originalInput.chatMessage) {
+          chatActivityDocs.push({
+            leadId: createdLeads[j]!._id,
+            type: 'chat_message' as const,
+            text: originalInput.chatMessage,
+            occurredAt: now,
+          });
+        }
+      }
+      if (chatActivityDocs.length > 0) {
+        await (ActivityModel as any).insertMany(chatActivityDocs);
+      }
+
       // Score each lead and prepare updates + snapshots
       const bulkLeadOps: Array<{
         updateOne: {

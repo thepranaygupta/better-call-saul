@@ -39,14 +39,21 @@ export function CallBriefPanel({ leadId, isAIAvailable: aiAvailable }: CallBrief
 
   useEffect(() => {
     async function loadCached() {
-      for (const lang of ['en', 'hi', 'hinglish'] as Language[]) {
-        try {
-          const res = await fetch(`/api/ai/brief?leadId=${leadId}&language=${lang}`);
-          if (!res.ok) continue;
-          const data = await res.json();
-          if (data.brief) setBrief((prev) => ({ ...prev, [lang]: data.brief as CallBrief }));
-        } catch { /* no cached brief for this language */ }
-      }
+      const results = await Promise.all(
+        (['en', 'hi', 'hinglish'] as Language[]).map(async (lang) => {
+          try {
+            const res = await fetch(`/api/ai/brief?leadId=${leadId}&language=${lang}`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.brief ? { lang, brief: data.brief as CallBrief } : null;
+          } catch { return null; }
+        }),
+      );
+      setBrief((prev) => {
+        const next = { ...prev };
+        for (const r of results) if (r) next[r.lang] = r.brief;
+        return next;
+      });
     }
     loadCached();
   }, [leadId]);

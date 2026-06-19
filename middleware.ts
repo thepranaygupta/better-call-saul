@@ -32,11 +32,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
-  // Admins should not land on the BDA call queue
-  if (isAuthenticated && pathname === '/queue' && token?.role === 'admin') {
-    return NextResponse.redirect(new URL('/analytics', request.url));
-  }
-
   if (!isAuthenticated && !isLoginPage && !isLandingPage) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);

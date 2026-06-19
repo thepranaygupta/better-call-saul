@@ -27,14 +27,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const leadId = request.nextUrl.searchParams.get('leadId');
-  const language = request.nextUrl.searchParams.get('language');
-  if (!leadId || !language) {
+  const parsed = generateBriefSchema.safeParse({
+    leadId: request.nextUrl.searchParams.get('leadId'),
+    language: request.nextUrl.searchParams.get('language'),
+  });
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'Missing required params: leadId, language' } },
+      { error: { code: 'VALIDATION_ERROR', message: 'Invalid params: leadId (string) and language (en|hi|hinglish) required' } },
       { status: 400 },
     );
   }
+  const { leadId, language } = parsed.data;
 
   await connectDB();
   const scoped = scopeLeadQueryToUser(session, { _id: leadId });

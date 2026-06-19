@@ -86,14 +86,18 @@ export async function fetchQueueData(
   const session = await requireAuth();
   await connectDB();
 
-  // Build scoped query -- RBAC helpers return Record<string, unknown>
-  // which we pass directly to Mongoose filter params
+  // Build scoped query. Cast projectId.$in to ObjectIds so the filter
+  // works with both .find() (auto-casts) and .aggregate() (does not).
   const baseQuery = scopeLeadQueryToUser(session);
   const leadFilter: Record<string, unknown> = { ...baseQuery };
+  if (leadFilter.projectId && typeof leadFilter.projectId === 'object' && '$in' in (leadFilter.projectId as Record<string, unknown>)) {
+    const ids = (leadFilter.projectId as { $in: string[] }).$in;
+    leadFilter.projectId = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
+  }
 
-  // Project filter
+  // Project filter (cast to ObjectId for aggregate compatibility)
   if (filters.projectId && filters.projectId !== 'all') {
-    leadFilter.projectId = filters.projectId;
+    leadFilter.projectId = new mongoose.Types.ObjectId(filters.projectId);
   }
 
   // Band filter
@@ -106,9 +110,9 @@ export async function fetchQueueData(
     leadFilter.sourceChannel = filters.sourceChannel;
   }
 
-  // Assigned BDA filter
+  // Assigned BDA filter (cast to ObjectId for aggregate compatibility)
   if (filters.assignedBdaId && filters.assignedBdaId !== 'all') {
-    leadFilter.assignedBdaId = filters.assignedBdaId;
+    leadFilter.assignedBdaId = new mongoose.Types.ObjectId(filters.assignedBdaId);
   }
 
   // Search filter -- regex on name, email, phone
@@ -188,9 +192,9 @@ export async function fetchQueueData(
   const totalPages = Math.max(1, Math.ceil(totalCount / LEADS_PER_PAGE));
   const safePage = Math.min(Math.max(1, page), totalPages);
 
-  // Band counts for summary strip — uses RBAC scope only (no user filters)
-  // Aggregate needs ObjectIds (Mongoose .find() auto-casts, aggregate doesn't)
-  const bandMatchQuery = { ...baseQuery };
+  // Band counts for summary strip (RBAC scope only, no user filters).
+  // leadFilter already has ObjectId-cast projectId from the RBAC setup above.
+  const bandMatchQuery = scopeLeadQueryToUser(session);
   if (bandMatchQuery.projectId && typeof bandMatchQuery.projectId === 'object' && '$in' in (bandMatchQuery.projectId as Record<string, unknown>)) {
     const ids = (bandMatchQuery.projectId as { $in: string[] }).$in;
     bandMatchQuery.projectId = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
@@ -207,25 +211,26 @@ export async function fetchQueueData(
     }
   }
 
-  // Fetch all matching leads to sort by band priority + intent in JS.
-  // MongoDB lacks a native custom-order sort, so we pull all matches
-  // and sort in memory. At scale, an aggregation $addFields pipeline would replace this.
-  const leads = await LeadModel.find(leadFilter as any)
-    .sort({ intentScore: -1 })
-    .lean()
-    .exec();
-
-  // Sort by band priority (call_now first), then by intent desc within band
-  const sorted = leads.sort((a, b) => {
-    const bandA = BAND_ORDER[a.band] ?? 4;
-    const bandB = BAND_ORDER[b.band] ?? 4;
-    if (bandA !== bandB) return bandA - bandB;
-    return (b.intentScore ?? 0) - (a.intentScore ?? 0);
-  });
-
-  // Paginate
-  const start = (safePage - 1) * LEADS_PER_PAGE;
-  const pageLeads = sorted.slice(start, start + LEADS_PER_PAGE);
+  // Sort by band priority (call_now first), then intent desc, at the DB level.
+  const pageLeads = await LeadModel.aggregate([
+    { $match: leadFilter },
+    { $addFields: {
+      _bandPriority: {
+        $switch: {
+          branches: [
+            { case: { $eq: ['$band', 'call_now'] }, then: 0 },
+            { case: { $eq: ['$band', 'qualify'] }, then: 1 },
+            { case: { $eq: ['$band', 'nurture'] }, then: 2 },
+            { case: { $eq: ['$band', 'cold'] }, then: 3 },
+          ],
+          default: 4,
+        },
+      },
+    }},
+    { $sort: { _bandPriority: 1, intentScore: -1 } },
+    { $skip: (safePage - 1) * LEADS_PER_PAGE },
+    { $limit: LEADS_PER_PAGE },
+  ]).exec();
 
   // Get project names for the leads on this page
   const projectIds = [...new Set(pageLeads.map((l) => String(l.projectId)))];

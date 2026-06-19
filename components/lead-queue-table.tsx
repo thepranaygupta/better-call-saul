@@ -567,7 +567,7 @@ interface LeadQueueTableProps {
 export function LeadQueueTable({ data }: LeadQueueTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   // URL-derived filter state
   const currentProject = searchParams.get('project') ?? 'all';
@@ -664,6 +664,14 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
 
   return (
     <div className="space-y-2">
+      {/* ── Loading bar ──────────────────────────────────── */}
+      {isPending && (
+        <div className="h-0.5 w-full overflow-hidden bg-stone-100">
+          <div className="h-full w-1/3 animate-pulse bg-amber-600" style={{ animation: 'loading-slide 1s ease-in-out infinite' }} />
+          <style>{`@keyframes loading-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
+        </div>
+      )}
+
       {/* ── Band count summary + lead count ──────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-2">
         <BandCountStrip
@@ -741,6 +749,9 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
           )}
         </div>
       </div>
+
+      {/* ── Table content (dims during server transition) ── */}
+      <div className={cn('transition-opacity duration-150', isPending && 'pointer-events-none opacity-40')}>
 
       {/* ── Empty state ───────────────────────────────────── */}
       {data.leads.length === 0 ? (
@@ -900,6 +911,8 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
           </div>
         </>
       )}
+
+      </div>{/* end dimming wrapper */}
 
       {/* ── Pagination ────────────────────────────────────── */}
       {data.totalPages > 1 && (

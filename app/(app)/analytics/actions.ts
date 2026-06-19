@@ -61,34 +61,29 @@ export async function getFunnelData(
   }
 
   // Stage 1: Registered = total leads matching the filter
-  const registeredCount = await LeadModel.countDocuments(leadFilter as any);
+  // Get lead IDs and enrolled count via a single aggregation instead
+  // of loading all lead documents into memory.
+  const [registeredCount, leadIdAgg, enrolledCount] = await Promise.all([
+    LeadModel.countDocuments(leadFilter as any),
+    (LeadModel as any).distinct('_id', leadFilter as any).exec(),
+    LeadModel.countDocuments({ ...leadFilter, outcome: 'enrolled' } as any),
+  ]);
 
-  // Get lead IDs matching the filter for subsequent stages
-  const matchingLeads = await LeadModel.find(leadFilter as any)
-    .select('_id outcome')
-    .lean()
-    .exec();
+  const leadIds = leadIdAgg;
 
-  const leadIds = matchingLeads.map((l) => l._id);
-
-  // Stage 2: Attended = leads with an attended_live or watched_replay activity
-  const attendedLeadIds = await (ActivityModel as any).distinct('leadId', {
-    leadId: { $in: leadIds },
-    type: { $in: ['attended_live', 'watched_replay'] },
-  }).exec();
+  // Stage 2 + 3 in parallel (distinct queries on indexed fields)
+  const [attendedLeadIds, connectedLeadIds] = await Promise.all([
+    (ActivityModel as any).distinct('leadId', {
+      leadId: { $in: leadIds },
+      type: { $in: ['attended_live', 'watched_replay'] },
+    }).exec(),
+    (DispositionModel as any).distinct('leadId', {
+      leadId: { $in: leadIds },
+      outcome: 'connected',
+    }).exec(),
+  ]);
   const attendedCount = attendedLeadIds.length;
-
-  // Stage 3: Connected = leads with at least one disposition outcome=connected
-  const connectedLeadIds = await (DispositionModel as any).distinct('leadId', {
-    leadId: { $in: leadIds },
-    outcome: 'connected',
-  }).exec();
   const connectedCount = connectedLeadIds.length;
-
-  // Stage 4: Enrolled = leads with outcome='enrolled'
-  const enrolledCount = matchingLeads.filter(
-    (l) => l.outcome === 'enrolled',
-  ).length;
 
   // Build stages with percentages relative to registered
   const stages: FunnelStage[] = [

@@ -192,20 +192,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Try it */}
-        <div className="flex w-full flex-col items-center gap-4">
-          <SectionLabel>Try it</SectionLabel>
-          <p className="text-center text-xs text-muted-foreground">
-            Demo credentials for all three roles are in the README.
-          </p>
-          <Link
-            href="/login"
-            className="inline-flex h-10 w-full max-w-xs items-center justify-center bg-amber-700 text-sm font-medium text-white transition-colors hover:bg-amber-800"
-          >
-            Sign in
-          </Link>
-        </div>
-
         {/* Built with */}
         <div className="flex w-full flex-col items-center gap-4">
           <SectionLabel>Built with</SectionLabel>

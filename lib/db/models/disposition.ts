@@ -22,11 +22,13 @@ const dispositionSchema = new Schema<IDisposition>(
       type: Schema.Types.ObjectId,
       ref: 'Lead',
       required: true,
+      index: true,
     },
     bdaId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
     },
     outcome: {
       type: String,

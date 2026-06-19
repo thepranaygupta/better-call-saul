@@ -2,6 +2,7 @@ import {
   getScoringConfig,
   getScoringConfigHistory,
 } from '@/app/(app)/admin/actions';
+import { requireRole } from '@/lib/auth/rbac';
 import { ScoringConfigEditor } from '@/components/admin/scoring-config-editor';
 
 export const metadata = {
@@ -9,6 +10,8 @@ export const metadata = {
 };
 
 export default async function ScoringConfigPage() {
+  await requireRole('admin');
+
   const [config, history] = await Promise.all([
     getScoringConfig(),
     getScoringConfigHistory(),

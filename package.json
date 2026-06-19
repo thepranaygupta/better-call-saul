@@ -13,7 +13,7 @@
     "seed": "tsx scripts/seed.ts",
     "db": "docker start saul-mongo 2>/dev/null || docker run -d -p 27017:27017 --name saul-mongo mongo:7",
     "db:stop": "docker stop saul-mongo",
-    "setup": "npm run db && npm run seed",
+    "setup": "pnpm db && pnpm seed",
     "test": "vitest run",
     "test:watch": "vitest"
   },

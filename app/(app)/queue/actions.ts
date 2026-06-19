@@ -1,9 +1,12 @@
 'use server';
 
 import mongoose from 'mongoose';
+import { revalidatePath } from 'next/cache';
 import { connectDB } from '@/lib/db/connection';
 import { LeadModel, ProjectModel, ActivityModel, UserModel } from '@/lib/db/models';
-import { requireAuth, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
+import { requireAuth, requireRole, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
+import { assignLeadSchema, bulkAssignLeadsSchema } from '@/lib/validation/schemas';
+import { logAudit } from '@/lib/audit';
 
 const LEADS_PER_PAGE = 50;
 
@@ -324,4 +327,156 @@ export async function fetchQueueData(
     currentUserRole: session.user.role,
     bandCounts,
   };
+}
+
+// ---------------------------------------------------------------------------
+// getBdasForProject — list BDAs available for assignment in a project
+// ---------------------------------------------------------------------------
+
+export interface ProjectBda {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+export async function getBdasForProject(projectId: string): Promise<ProjectBda[]> {
+  await requireRole('admin', 'sales_lead');
+  await connectDB();
+
+  const bdas = await UserModel.find({
+    role: 'bda',
+    assignedProjectIds: new mongoose.Types.ObjectId(projectId),
+    active: true,
+  } as any)
+    .select('_id name email')
+    .lean()
+    .exec();
+
+  return bdas.map((u: { _id: unknown; name: string; email: string }) => ({
+    _id: String(u._id),
+    name: u.name,
+    email: u.email,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// assignLeadToBda — assign or unassign a single lead
+// ---------------------------------------------------------------------------
+
+export async function assignLeadToBda(
+  data: unknown,
+): Promise<{ success: boolean; assignedBdaId: string | null; assignedBdaName: string | null }> {
+  const session = await requireRole('admin', 'sales_lead');
+  const parsed = assignLeadSchema.parse(data);
+
+  await connectDB();
+
+  // Verify lead is in the user's project scope
+  const scoped = scopeLeadQueryToUser(session, { _id: parsed.leadId });
+  const lead = await LeadModel.findOne(scoped as any).lean();
+  if (!lead) throw new Error('Lead not found or access denied');
+
+  let assignedBdaName: string | null = null;
+
+  if (parsed.bdaId !== null) {
+    // Verify BDA exists, is active, is a BDA, and is assigned to the same project
+    const bda = await UserModel.findOne({
+      _id: parsed.bdaId,
+      role: 'bda',
+      active: true,
+      assignedProjectIds: lead.projectId,
+    } as any)
+      .select('_id name')
+      .lean();
+    if (!bda) throw new Error('BDA not found or not assigned to this project');
+    assignedBdaName = (bda as { name: string }).name;
+  }
+
+  await (LeadModel as any).findByIdAndUpdate(
+    parsed.leadId,
+    { assignedBdaId: parsed.bdaId ?? null },
+  );
+
+  await logAudit(session.user.id, 'assign_lead', 'lead', parsed.leadId, {
+    bdaId: parsed.bdaId,
+    bdaName: assignedBdaName,
+    previousBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
+  });
+
+  revalidatePath('/queue');
+  revalidatePath(`/leads/${parsed.leadId}`);
+
+  return {
+    success: true,
+    assignedBdaId: parsed.bdaId,
+    assignedBdaName,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// bulkAssignLeads — assign or unassign multiple leads
+// ---------------------------------------------------------------------------
+
+export async function bulkAssignLeads(
+  data: unknown,
+): Promise<{ success: boolean; count: number }> {
+  const session = await requireRole('admin', 'sales_lead');
+  const parsed = bulkAssignLeadsSchema.parse(data);
+
+  await connectDB();
+
+  // Verify all leads are in the user's project scope
+  const scoped = scopeLeadQueryToUser(session, {
+    _id: { $in: parsed.leadIds.map((id) => new mongoose.Types.ObjectId(id)) },
+  });
+  const leads = await LeadModel.find(scoped as any)
+    .select('_id projectId')
+    .lean();
+
+  if (leads.length === 0) throw new Error('No leads found or access denied');
+  if (leads.length !== parsed.leadIds.length) {
+    throw new Error('Some leads not found or access denied');
+  }
+
+  // Collect unique project IDs from the leads
+  const projectIds = [...new Set(leads.map((l) => String(l.projectId)))];
+
+  if (parsed.bdaId !== null) {
+    // Verify BDA is assigned to ALL projects that the selected leads belong to
+    const bda = await UserModel.findOne({
+      _id: parsed.bdaId,
+      role: 'bda',
+      active: true,
+    } as any)
+      .select('_id name assignedProjectIds')
+      .lean();
+    if (!bda) throw new Error('BDA not found');
+
+    const bdaProjectIds = ((bda as { assignedProjectIds: { toString(): string }[] })
+      .assignedProjectIds ?? []).map((id) => String(id));
+
+    for (const pid of projectIds) {
+      if (!bdaProjectIds.includes(pid)) {
+        throw new Error('BDA is not assigned to one or more lead projects');
+      }
+    }
+  }
+
+  // Perform the bulk update
+  await (LeadModel as any).updateMany(
+    { _id: { $in: parsed.leadIds.map((id) => new mongoose.Types.ObjectId(id)) } },
+    { assignedBdaId: parsed.bdaId ?? null },
+  );
+
+  // Audit each assignment
+  for (const leadId of parsed.leadIds) {
+    await logAudit(session.user.id, 'assign_lead', 'lead', leadId, {
+      bdaId: parsed.bdaId,
+      bulk: true,
+    });
+  }
+
+  revalidatePath('/queue');
+
+  return { success: true, count: leads.length };
 }

@@ -95,6 +95,19 @@ export const bulkLeadImportSchema = z.object({
 });
 export type BulkLeadImportInput = z.infer<typeof bulkLeadImportSchema>;
 
+// --- Lead assignment ---
+export const assignLeadSchema = z.object({
+  leadId: z.string().min(1),
+  bdaId: z.string().min(1).nullable(),
+});
+export type AssignLeadInput = z.infer<typeof assignLeadSchema>;
+
+export const bulkAssignLeadsSchema = z.object({
+  leadIds: z.array(z.string().min(1)).min(1).max(500),
+  bdaId: z.string().min(1).nullable(),
+});
+export type BulkAssignLeadsInput = z.infer<typeof bulkAssignLeadsSchema>;
+
 // --- Admin: Scoring config ---
 export const updateScoringConfigSchema = z.object({
   projectId: z.string().optional(),

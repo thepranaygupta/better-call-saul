@@ -11,6 +11,7 @@ import {
   MasterclassModel,
   ScoringConfigModel,
   ProjectModel,
+  UserModel,
   type IActivity,
   type IExtractedSignal,
   type IDisposition,
@@ -65,6 +66,11 @@ export interface LeadDetailSnapshot {
   computedAt: string;
 }
 
+export interface LeadDetailBda {
+  _id: string;
+  name: string;
+}
+
 export interface LeadDetail {
   _id: string;
   name: string;
@@ -84,6 +90,8 @@ export interface LeadDetail {
   projectName: string;
   masterclassTitle: string;
   registeredAt: string;
+  assignedBdaId: string | null;
+  assignedBdaName: string | null;
 }
 
 export interface LeadDetailData {
@@ -92,6 +100,10 @@ export interface LeadDetailData {
   signals: LeadDetailSignal[];
   dispositions: LeadDetailDisposition[];
   snapshot: LeadDetailSnapshot | null;
+  /** BDAs available for assignment (only populated for admin/sales_lead) */
+  availableBdas: LeadDetailBda[];
+  /** Current user's role */
+  currentUserRole: 'admin' | 'sales_lead' | 'bda';
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +124,7 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
   // Fire-and-forget: don't slow down the read path
   void logAudit(session.user.id, 'view_lead', 'lead', leadIdStr);
 
-  const [activities, signals, dispositions, masterclass, project] =
+  const [activities, signals, dispositions, masterclass, project, assignedBda] =
     await Promise.all([
       ActivityModel.find({ leadId: leadIdStr } as any)
         .sort({ occurredAt: -1 })
@@ -127,7 +139,27 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
         .exec() as Promise<IDisposition[]>,
       (MasterclassModel as any).findById(lead.masterclassId).lean().exec(),
       (ProjectModel as any).findById(lead.projectId).lean().exec(),
+      lead.assignedBdaId
+        ? (UserModel as any).findById(lead.assignedBdaId).select('_id name').lean().exec()
+        : Promise.resolve(null),
     ]);
+
+  // Fetch BDAs available for assignment (only for admin/sales_lead)
+  let availableBdas: LeadDetailBda[] = [];
+  if (session.user.role === 'admin' || session.user.role === 'sales_lead') {
+    const bdaUsers = await UserModel.find({
+      role: 'bda',
+      assignedProjectIds: lead.projectId,
+      active: true,
+    } as any)
+      .select('_id name')
+      .lean()
+      .exec();
+    availableBdas = bdaUsers.map((u: { _id: unknown; name: string }) => ({
+      _id: String(u._id),
+      name: u.name,
+    }));
+  }
 
   // Compute a fresh score snapshot if stale (>1 hour) or missing
   let snapshot = (await ScoreSnapshotModel.findOne({ leadId: leadIdStr } as any)
@@ -245,6 +277,8 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
       masterclassTitle: masterclass?.title ?? 'Unknown',
       registeredAt:
         lead.registeredAt?.toISOString() ?? new Date().toISOString(),
+      assignedBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
+      assignedBdaName: assignedBda ? (assignedBda as { name: string }).name : null,
     },
     activities: activities.map((a: IActivity) => ({
       _id: String(a._id),
@@ -287,6 +321,8 @@ export async function getLeadDetail(leadId: string): Promise<LeadDetailData> {
               : String(snapshot.computedAt),
         }
       : null,
+    availableBdas,
+    currentUserRole: session.user.role as 'admin' | 'sales_lead' | 'bda',
   };
 }
 

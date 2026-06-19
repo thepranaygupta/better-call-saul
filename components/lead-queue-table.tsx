@@ -10,6 +10,7 @@ import {
   flexRender,
   type ColumnDef,
   type SortingState,
+  type RowSelectionState,
 } from '@tanstack/react-table';
 import { BandBadge, BAND_BORDER_COLORS, type Band } from '@/components/band-badge';
 import {
@@ -29,8 +30,19 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ChevronsUpDownIcon,
+  UserRoundIcon,
+  CheckIcon,
 } from 'lucide-react';
-import type { BandCounts, QueueData, QueueLead } from '@/app/(app)/queue/actions';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { BulkAssignBar } from '@/components/bulk-assign-bar';
+import { assignLeadToBda } from '@/app/(app)/queue/actions';
+import type { BandCounts, QueueData, QueueLead, QueueBda } from '@/app/(app)/queue/actions';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -303,11 +315,124 @@ function FilterPill({ label, value, options, onChange }: FilterPillProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Row-level assign cell -- compact dropdown trigger for the Owner column
+// ---------------------------------------------------------------------------
+
+function RowAssignCell({
+  leadId,
+  currentBdaId,
+  currentBdaName,
+  bdas,
+}: {
+  leadId: string;
+  currentBdaId: string | null;
+  currentBdaName: string | null;
+  bdas: QueueBda[];
+}) {
+  const [bdaId, setBdaId] = useState(currentBdaId);
+  const [bdaName, setBdaName] = useState(currentBdaName);
+  const [isPending, startTransition] = useTransition();
+
+  const handleAssign = (newBdaId: string | null) => {
+    const newName = newBdaId ? bdas.find((b) => b._id === newBdaId)?.name ?? null : null;
+    setBdaId(newBdaId);
+    setBdaName(newName);
+    startTransition(async () => {
+      try {
+        await assignLeadToBda({ leadId, bdaId: newBdaId });
+      } catch {
+        // Revert on failure
+        setBdaId(currentBdaId);
+        setBdaName(currentBdaName);
+      }
+    });
+  };
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            'inline-flex items-center gap-1 px-1 py-0.5 text-[11px] transition-colors',
+            'hover:text-amber-700 focus:outline-none',
+            isPending && 'opacity-50',
+            bdaName ? 'text-stone-600' : 'text-stone-400',
+          )}
+          disabled={isPending}
+        >
+          <UserRoundIcon className="size-3 shrink-0" />
+          <span className="max-w-[80px] truncate">
+            {bdaName ?? '--'}
+          </span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={4}>
+          <DropdownMenuItem
+            onClick={() => handleAssign(null)}
+            className="text-xs text-stone-400"
+          >
+            {bdaId === null && <CheckIcon className="mr-1 size-3" />}
+            Unassigned
+          </DropdownMenuItem>
+          {bdas.length > 0 && <DropdownMenuSeparator />}
+          {bdas.map((bda) => (
+            <DropdownMenuItem
+              key={bda._id}
+              onClick={() => handleAssign(bda._id)}
+              className="text-xs"
+            >
+              {bdaId === bda._id && <CheckIcon className="mr-1 size-3" />}
+              {bda.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // TanStack column definitions -- dense, CRM-style
 // ---------------------------------------------------------------------------
 
-function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
-  const cols: ColumnDef<QueueLead>[] = [
+function createColumns(
+  showOwner: boolean,
+  canAssign: boolean,
+  bdas: { _id: string; name: string }[],
+): ColumnDef<QueueLead>[] {
+  const cols: ColumnDef<QueueLead>[] = [];
+
+  // Checkbox column for selection (admin/sales_lead only)
+  if (canAssign) {
+    cols.push({
+      id: 'select',
+      size: 36,
+      enableSorting: false,
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          ref={(el) => {
+            if (el) el.indeterminate = table.getIsSomePageRowsSelected();
+          }}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="size-3.5 accent-amber-700"
+          aria-label="Select all leads"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
+          className="size-3.5 accent-amber-700"
+          aria-label={`Select ${row.original.name}`}
+        />
+      ),
+    });
+  }
+
+  cols.push(
     {
       accessorKey: 'name',
       header: 'Lead',
@@ -398,20 +523,28 @@ function createColumns(showOwner: boolean): ColumnDef<QueueLead>[] {
         />
       ),
     },
-  ];
+  );
 
-  // Insert owner column before Last Activity if admin/sales_lead
+  // Insert owner/assign column before Last Activity if admin/sales_lead
   if (showOwner) {
     cols.splice(cols.length - 1, 0, {
       accessorKey: 'assignedBdaName',
       header: 'Owner',
       enableSorting: true,
       size: 110,
-      cell: ({ row }) => (
-        <span className="text-xs text-stone-500">
-          {row.original.assignedBdaName ?? '--'}
-        </span>
-      ),
+      cell: ({ row }) =>
+        canAssign ? (
+          <RowAssignCell
+            leadId={row.original._id}
+            currentBdaId={row.original.assignedBdaId}
+            currentBdaName={row.original.assignedBdaName}
+            bdas={bdas}
+          />
+        ) : (
+          <span className="text-xs text-stone-500">
+            {row.original.assignedBdaName ?? '--'}
+          </span>
+        ),
     });
   }
 
@@ -441,20 +574,32 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
 
   const showOwnerFilter =
     data.currentUserRole === 'admin' || data.currentUserRole === 'sales_lead';
+  const canAssign =
+    data.currentUserRole === 'admin' || data.currentUserRole === 'sales_lead';
 
   // TanStack table sorting (client-side within the current page)
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  const columns = useMemo(() => createColumns(showOwnerFilter), [showOwnerFilter]);
+  const columns = useMemo(
+    () => createColumns(showOwnerFilter, canAssign, data.bdas),
+    [showOwnerFilter, canAssign, data.bdas],
+  );
 
   const table = useReactTable({
     data: data.leads,
     columns,
-    state: { sorting },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
+    onRowSelectionChange: canAssign ? setRowSelection : undefined,
+    enableRowSelection: canAssign,
+    getRowId: (row) => row._id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  const selectedLeadIds = Object.keys(rowSelection).filter((k) => rowSelection[k]);
+  const clearSelection = useCallback(() => setRowSelection({}), []);
 
   // URL navigation helper
   const navigate = useCallback(
@@ -753,7 +898,10 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
 
       {/* ── Pagination ────────────────────────────────────── */}
       {data.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-stone-200 pt-2">
+        <div className={cn(
+          'flex items-center justify-between border-t border-stone-200 pt-2',
+          selectedLeadIds.length > 0 && 'pb-16',
+        )}>
           <span className="text-[11px] tabular-nums text-stone-400">
             Page {data.page} of {data.totalPages}
           </span>
@@ -778,6 +926,17 @@ export function LeadQueueTable({ data }: LeadQueueTableProps) {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* ── Bulk assign bar (fixed bottom, only when leads selected) ── */}
+      {canAssign && selectedLeadIds.length > 0 && (
+        <BulkAssignBar
+          selectedCount={selectedLeadIds.length}
+          selectedLeadIds={selectedLeadIds}
+          bdas={data.bdas}
+          onClearSelection={clearSelection}
+          onAssigned={clearSelection}
+        />
       )}
     </div>
   );

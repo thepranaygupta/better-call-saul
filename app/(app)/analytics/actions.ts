@@ -1,5 +1,6 @@
 'use server';
 
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db/connection';
 import {
   LeadModel,
@@ -7,7 +8,7 @@ import {
   DispositionModel,
   ProjectModel,
 } from '@/lib/db/models';
-import { requireAuth, scopeLeadQueryToUser, scopeQueryToUser } from '@/lib/auth/rbac';
+import { requireAuth, scopeLeadQueryToUser } from '@/lib/auth/rbac';
 
 export interface FunnelStage {
   name: string;
@@ -48,12 +49,16 @@ export async function getFunnelData(
   const session = await requireAuth();
   await connectDB();
 
-  // Build base lead query, RBAC-scoped
+  // Build base lead query, RBAC-scoped.
+  // For non-admins, only allow filtering to a project they're assigned to.
   const baseQuery = scopeLeadQueryToUser(session);
   const leadFilter: Record<string, unknown> = { ...baseQuery };
 
   if (projectId && projectId !== 'all') {
-    leadFilter.projectId = projectId;
+    const allowed = session.user.assignedProjectIds ?? [];
+    if (session.user.role === 'admin' || allowed.includes(projectId)) {
+      leadFilter.projectId = new mongoose.Types.ObjectId(projectId);
+    }
   }
 
   if (sourceChannel && sourceChannel !== 'all') {
@@ -110,11 +115,11 @@ export async function getFunnelData(
   ];
 
   // Fetch projects the user can see for filter dropdown
-  const projectQuery = scopeQueryToUser(session);
-  const projects = await ProjectModel.find({
-    ...projectQuery,
-    active: true,
-  } as any)
+  const projectFilter: Record<string, unknown> = { active: true };
+  if (session.user.role !== 'admin') {
+    projectFilter._id = { $in: (session.user.assignedProjectIds ?? []).map((id: string) => new mongoose.Types.ObjectId(id)) };
+  }
+  const projects = await ProjectModel.find(projectFilter as any)
     .select('_id name')
     .lean()
     .exec();
@@ -170,12 +175,23 @@ export async function getCalibrationData(
   const session = await requireAuth();
   await connectDB();
 
-  // Build scoped query (RBAC)
+  // Build scoped query (RBAC) with ObjectId casting for aggregate
   const baseQuery = scopeLeadQueryToUser(session);
-  const filter: Record<string, unknown> =
-    projectId && projectId !== 'all'
-      ? { ...baseQuery, projectId }
-      : { ...baseQuery };
+  const filter: Record<string, unknown> = { ...baseQuery };
+
+  // Cast RBAC projectId.$in strings to ObjectIds for aggregate compatibility
+  if (filter.projectId && typeof filter.projectId === 'object' && '$in' in (filter.projectId as Record<string, unknown>)) {
+    const ids = (filter.projectId as { $in: string[] }).$in;
+    filter.projectId = { $in: ids.map((id: string) => new mongoose.Types.ObjectId(id)) };
+  }
+
+  // Validate projectId filter against RBAC scope
+  if (projectId && projectId !== 'all') {
+    const allowed = session.user.assignedProjectIds ?? [];
+    if (session.user.role === 'admin' || allowed.includes(projectId)) {
+      filter.projectId = new mongoose.Types.ObjectId(projectId);
+    }
+  }
 
   // Exclude disqualified leads from calibration — they skew the data
   filter.band = { $in: ['call_now', 'qualify', 'nurture', 'cold'] };

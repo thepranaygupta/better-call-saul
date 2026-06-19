@@ -102,11 +102,13 @@ export async function POST(req: NextRequest) {
       .lean(),
   ]);
 
+  interface MCDoc { _id: unknown; projectId?: unknown; pitchStartMinute?: number; durationMinutes?: number }
+
   const validProjectIds = new Set(
-    existingProjects.map((p) => String(p._id)),
+    existingProjects.map((p: { _id: unknown }) => String(p._id)),
   );
-  const masterclassMap = new Map(
-    existingMasterclasses.map((m) => [String(m._id), m]),
+  const masterclassMap = new Map<string, MCDoc>(
+    existingMasterclasses.map((m: MCDoc) => [String(m._id), m] as [string, MCDoc]),
   );
 
   // ---- Get scoring config (global fallback) ----
@@ -136,7 +138,7 @@ export async function POST(req: NextRequest) {
   };
 
   for (let i = 0; i < leads.length; i++) {
-    const lead = leads[i];
+    const lead = leads[i]!;
     const emailLower = lead.email.toLowerCase();
 
     // Check project exists
@@ -269,8 +271,8 @@ export async function POST(req: NextRequest) {
       const snapshotsToInsert: Array<Record<string, unknown>> = [];
 
       for (let j = 0; j < createdLeads.length; j++) {
-        const lead = createdLeads[j];
-        const originalInput = chunk[j].lead;
+        const lead = createdLeads[j]!;
+        const originalInput = chunk[j]!.lead;
 
         // Build the masterclass context for scoring
         const mc = masterclassMap.get(originalInput.masterclassId);
@@ -281,12 +283,8 @@ export async function POST(req: NextRequest) {
           sourceChannel: lead.sourceChannel,
           isExistingCustomer: lead.isExistingCustomer,
           email: lead.email,
-          masterclassPitchStartMinute: mc
-            ? (mc as Record<string, unknown>).pitchStartMinute as number | undefined
-            : undefined,
-          masterclassDurationMinutes: mc
-            ? (mc as Record<string, unknown>).durationMinutes as number | undefined
-            : undefined,
+          masterclassPitchStartMinute: mc?.pitchStartMinute,
+          masterclassDurationMinutes: mc?.durationMinutes,
         };
 
         // Only the "registered" activity exists at import time

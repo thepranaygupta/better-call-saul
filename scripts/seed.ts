@@ -401,7 +401,7 @@ async function seed() {
       totalLeads++;
 
       // --- Activities ---
-      const leadActivities: ActivitySeedData[] = [];
+      const leadActivities: { type: string; numericValue?: number; occurredAt: Date }[] = [];
       const activityDocs: { leadId: mongoose.Types.ObjectId; type: string; numericValue?: number; text?: string; occurredAt: Date }[] = [];
 
       // Registration event (everyone)
@@ -437,7 +437,7 @@ async function seed() {
           ? (seededRandom() < 0.3 ? 1 : 0)
           : 0;
 
-      const leadChatSignals: SignalSeedData[] = [];
+      const leadChatSignals: { signalType: string; polarity: string }[] = [];
       const chatActivityIds: mongoose.Types.ObjectId[] = [];
 
       for (let c = 0; c < chatCount; c++) {

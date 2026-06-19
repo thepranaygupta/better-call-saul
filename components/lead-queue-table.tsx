@@ -245,7 +245,7 @@ function DebouncedSearchInput({
       </label>
       <input
         id="queue-search"
-        type="search"
+        type="text"
         placeholder="Search name, email, phone..."
         value={value}
         onChange={handleChange}

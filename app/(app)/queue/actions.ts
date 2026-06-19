@@ -270,11 +270,11 @@ export async function fetchQueueData(
   );
 
   // Fetch user's accessible projects for the filter dropdown
-  const projectQuery = scopeQueryToUser(session);
-  const allProjects = await ProjectModel.find({
-    ...projectQuery,
-    active: { $ne: false },
-  } as any)
+  const projectFilter: Record<string, unknown> = { active: { $ne: false } };
+  if (session.user.role !== 'admin') {
+    projectFilter._id = { $in: (session.user.assignedProjectIds ?? []).map((id: string) => new mongoose.Types.ObjectId(id)) };
+  }
+  const allProjects = await ProjectModel.find(projectFilter as any)
     .select('_id name')
     .lean()
     .exec();

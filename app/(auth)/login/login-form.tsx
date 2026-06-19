@@ -24,15 +24,16 @@ export function LoginForm() {
       email: form.get('email') as string,
       password: form.get('password') as string,
       redirect: false,
+      callbackUrl,
     });
 
-    if (result?.error) {
+    if (!result?.ok) {
       setError('Invalid email or password.');
       setPending(false);
       return;
     }
 
-    window.location.href = callbackUrl;
+    window.location.href = result.url ?? callbackUrl;
   }
 
   return (

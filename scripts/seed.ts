@@ -301,11 +301,11 @@ async function seed() {
   // -----------------------------------------------------------------------
   await ScoringConfigModel.create({
     version: 1,
-    fitWeights: FIT_WEIGHTS,
-    intentWeights: INTENT_WEIGHTS,
-    decayHalfLifeDays: DECAY_HALF_LIFE_DAYS,
-    disqualifiers: ['student_email_domain', 'unsubscribed', 'not_interested'],
-    thresholds: { hot: THRESHOLD_HOT, warm: THRESHOLD_WARM },
+    fitWeights: DEFAULT_SCORING_CONFIG.fitWeights,
+    intentWeights: DEFAULT_SCORING_CONFIG.intentWeights,
+    decayHalfLifeDays: DEFAULT_SCORING_CONFIG.decayHalfLifeDays,
+    disqualifiers: DEFAULT_SCORING_CONFIG.disqualifiers,
+    thresholds: DEFAULT_SCORING_CONFIG.thresholds,
     updatedBy: adminUser!._id,
   });
   console.log('Seeded default ScoringConfig (v1).');

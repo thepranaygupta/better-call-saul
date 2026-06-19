@@ -36,7 +36,6 @@ export async function getSidebarStats(
 
   const callNowQuery = { ...scope, band: 'call_now' } as Record<string, unknown>;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [callNowCount, totalLeads, calledToday] = await Promise.all([
     LeadModel.countDocuments(callNowQuery as any),
     LeadModel.countDocuments(scope as any),
@@ -65,7 +64,7 @@ export async function getNextLead(
   const scope = buildProjectScope(role, assignedProjectIds);
   const callNowQuery = { ...scope, band: 'call_now' } as Record<string, unknown>;
 
-  const lead = await LeadModel.findOne(callNowQuery)
+  const lead = await LeadModel.findOne(callNowQuery as any)
     .sort({ intentScore: -1 })
     .select('_id name')
     .lean();

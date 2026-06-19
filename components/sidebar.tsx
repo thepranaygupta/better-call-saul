@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -89,30 +89,33 @@ function getInitials(name?: string | null): string {
     .slice(0, 2);
 }
 
+function readRecentLeads(): RecentLead[] {
+  try {
+    const raw = localStorage.getItem(RECENT_LEADS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+const emptyLeads: RecentLead[] = [];
+
 function useRecentLeads(): RecentLead[] {
-  const [leads, setLeads] = useState<RecentLead[]>([]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(RECENT_LEADS_KEY);
-      if (raw) setLeads(JSON.parse(raw));
-    } catch {
-      // ignore parse errors
-    }
-
-    function onUpdate() {
-      try {
-        const raw = localStorage.getItem(RECENT_LEADS_KEY);
-        if (raw) setLeads(JSON.parse(raw));
-      } catch {
-        // ignore
-      }
-    }
-
-    window.addEventListener('saul:recent-leads-updated', onUpdate);
-    return () => window.removeEventListener('saul:recent-leads-updated', onUpdate);
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    window.addEventListener('saul:recent-leads-updated', onStoreChange);
+    return () => window.removeEventListener('saul:recent-leads-updated', onStoreChange);
   }, []);
 
+  const getSnapshot = useCallback(() => {
+    return JSON.stringify(readRecentLeads());
+  }, []);
+
+  const getServerSnapshot = useCallback(() => {
+    return JSON.stringify(emptyLeads);
+  }, []);
+
+  const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const leads: RecentLead[] = JSON.parse(raw);
   return leads.slice(0, 3);
 }
 

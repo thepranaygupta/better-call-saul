@@ -232,7 +232,7 @@ export function UserForm({ projects }: UserFormProps) {
                   )}
 
                   {/* Project checkboxes */}
-                  <div className="max-h-32 space-y-0.5 overflow-y-auto rounded border border-stone-200 p-1.5">
+                  <div className="max-h-32 space-y-0.5 overflow-y-auto border border-stone-200 p-1.5">
                     {activeProjects.map((project) => {
                       const isSelected = selectedProjectIds.includes(project._id);
                       return (

@@ -27,14 +27,14 @@ export default async function AdminPage() {
         <div className="flex gap-2">
           <Link
             href="/admin/import"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 text-[12px] font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-950"
+            className="inline-flex h-8 items-center gap-1.5 border border-stone-200 bg-white px-2.5 text-[12px] font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-950"
           >
             <UploadIcon className="size-3.5" aria-hidden />
             Import Leads
           </Link>
           <Link
             href="/admin/scoring"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 text-[12px] font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-950"
+            className="inline-flex h-8 items-center gap-1.5 border border-stone-200 bg-white px-2.5 text-[12px] font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-950"
           >
             <SlidersHorizontalIcon className="size-3.5" aria-hidden />
             Scoring Config

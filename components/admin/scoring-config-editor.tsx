@@ -359,7 +359,7 @@ export function ScoringConfigEditor({
       {/* Decay + Thresholds + Disqualifiers */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Decay */}
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
+        <div className="border border-stone-200 bg-white p-4">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-stone-500">
             Time Decay
           </h3>
@@ -388,7 +388,7 @@ export function ScoringConfigEditor({
         </div>
 
         {/* Thresholds */}
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
+        <div className="border border-stone-200 bg-white p-4">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-stone-500">
             Band Thresholds
           </h3>
@@ -443,7 +443,7 @@ export function ScoringConfigEditor({
         </div>
 
         {/* Disqualifiers */}
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
+        <div className="border border-stone-200 bg-white p-4">
           <h3 className="mb-3 text-xs font-medium uppercase tracking-widest text-stone-500">
             Disqualifiers
           </h3>
@@ -471,7 +471,7 @@ export function ScoringConfigEditor({
       </div>
 
       {/* Version History */}
-      <div className="rounded-lg border border-stone-200 bg-white">
+      <div className="border border-stone-200 bg-white">
         <button
           type="button"
           onClick={() => setHistoryExpanded(!historyExpanded)}
@@ -562,7 +562,7 @@ function WeightSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white">
+    <div className="border border-stone-200 bg-white">
       <button
         type="button"
         onClick={onToggle}
@@ -640,7 +640,7 @@ function StatusMessage({
 }) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+      className={`flex items-center gap-2 border px-3 py-2 text-sm ${
         type === 'success'
           ? 'border-green-200 bg-green-50 text-green-800'
           : 'border-red-200 bg-red-50 text-red-800'

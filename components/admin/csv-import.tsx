@@ -390,7 +390,7 @@ export function CsvImport({ projects }: CsvImportProps) {
   return (
     <div className="space-y-4">
       {/* Project + Masterclass selection */}
-      <div className="rounded-lg border border-stone-200 bg-white p-4">
+      <div className="border border-stone-200 bg-white p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
@@ -487,8 +487,8 @@ export function CsvImport({ projects }: CsvImportProps) {
           }}
           className={
             step === 'upload'
-              ? 'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-stone-200 bg-stone-50 py-12 transition-colors hover:border-amber-600 hover:bg-amber-50/30'
-              : 'rounded-lg border border-stone-200 bg-white p-3'
+              ? 'flex cursor-pointer flex-col items-center justify-center gap-3 border-2 border-dashed border-stone-200 bg-stone-50 py-12 transition-colors hover:border-amber-600 hover:bg-amber-50/30'
+              : 'border border-stone-200 bg-white p-3'
           }
         >
           {step === 'upload' ? (
@@ -555,7 +555,7 @@ export function CsvImport({ projects }: CsvImportProps) {
 
       {/* Error message */}
       {importError && (
-        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+        <div className="flex items-start gap-2 border border-red-200 bg-red-50 p-3">
           <AlertCircleIcon
             className="mt-0.5 size-4 shrink-0 text-red-800"
             aria-hidden
@@ -591,7 +591,7 @@ export function CsvImport({ projects }: CsvImportProps) {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+          <div className="overflow-x-auto border border-stone-200 bg-white">
             <Table>
               <TableHeader>
                 {/* Column mapping dropdowns row */}
@@ -682,7 +682,7 @@ export function CsvImport({ projects }: CsvImportProps) {
 
       {/* Importing state */}
       {step === 'importing' && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-stone-200 bg-white py-12">
+        <div className="flex flex-col items-center justify-center gap-3 border border-stone-200 bg-white py-12">
           <LoaderIcon
             className="size-6 animate-spin text-amber-700"
             aria-hidden
@@ -699,7 +699,7 @@ export function CsvImport({ projects }: CsvImportProps) {
       {/* Results */}
       {step === 'done' && importResult && (
         <div className="space-y-3">
-          <div className="rounded-lg border border-stone-200 bg-white p-4">
+          <div className="border border-stone-200 bg-white p-4">
             <div className="flex items-start gap-3">
               <CheckCircle2Icon
                 className="mt-0.5 size-5 shrink-0 text-teal-700"
@@ -747,7 +747,7 @@ export function CsvImport({ projects }: CsvImportProps) {
 
           {/* Error details */}
           {importResult.errors.length > 0 && (
-            <div className="rounded-lg border border-stone-200 bg-white">
+            <div className="border border-stone-200 bg-white">
               <div className="border-b border-stone-200 px-3 py-2">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
                   ERROR DETAILS

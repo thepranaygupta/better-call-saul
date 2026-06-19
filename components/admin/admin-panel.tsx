@@ -67,13 +67,13 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
           </div>
 
           {projects.length === 0 ? (
-            <div className="flex items-center justify-center rounded-lg border border-dashed border-stone-300 p-8">
+            <div className="flex items-center justify-center border border-dashed border-stone-300 p-8">
               <p className="text-[13px] text-stone-500">
                 No projects yet. Create your first project above.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+            <div className="overflow-x-auto border border-stone-200 bg-white">
               <Table>
                 <TableHeader>
                   <TableRow className="border-stone-200 hover:bg-transparent">
@@ -149,13 +149,13 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
           </div>
 
           {users.length === 0 ? (
-            <div className="flex items-center justify-center rounded-lg border border-dashed border-stone-300 p-8">
+            <div className="flex items-center justify-center border border-dashed border-stone-300 p-8">
               <p className="text-[13px] text-stone-500">
                 No users yet. Create your first user above.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+            <div className="overflow-x-auto border border-stone-200 bg-white">
               <Table>
                 <TableHeader>
                   <TableRow className="border-stone-200 hover:bg-transparent">

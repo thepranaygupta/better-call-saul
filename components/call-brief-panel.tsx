@@ -104,7 +104,7 @@ export function CallBriefPanel({ leadId, isAIAvailable: aiAvailable }: CallBrief
                 aria-pressed={language === lang.value}
                 className={`px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
                   language === lang.value
-                    ? 'bg-stone-950 text-white'
+                    ? 'bg-amber-700 text-white'
                     : 'text-stone-400 hover:text-stone-600'
                 } ${!aiAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
               >

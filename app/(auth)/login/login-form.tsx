@@ -46,7 +46,7 @@ export function LoginForm() {
               required
               autoComplete="email"
               autoFocus
-              className="h-9 rounded-none border-stone-200 text-[13px] focus-visible:ring-amber-700"
+              className="h-9 text-[13px]"
             />
           </div>
 
@@ -63,7 +63,7 @@ export function LoginForm() {
               type="password"
               required
               autoComplete="current-password"
-              className="h-9 rounded-none border-stone-200 text-[13px] focus-visible:ring-amber-700"
+              className="h-9 text-[13px]"
             />
           </div>
 

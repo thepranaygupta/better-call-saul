@@ -56,9 +56,9 @@ function NavContent({
   return (
     <div className="flex h-full flex-col">
       {/* Brand */}
-      <div className="flex items-center gap-2 px-4 py-4">
+      <div className="flex items-center gap-2.5 px-4 py-4">
         <PhoneCallIcon className="size-5 text-amber-700" />
-        <span className="text-lg font-semibold tracking-tight text-stone-950">Saul</span>
+        <span className="text-sm font-semibold uppercase tracking-widest text-stone-950">SAUL</span>
       </div>
 
       <Separator />
@@ -144,7 +144,7 @@ export function Sidebar({ user }: SidebarProps) {
           </SheetContent>
         </Sheet>
         <PhoneCallIcon className="size-4 text-amber-700" />
-        <span className="text-sm font-semibold text-stone-950">Saul</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-stone-950">SAUL</span>
       </div>
     </>
   );

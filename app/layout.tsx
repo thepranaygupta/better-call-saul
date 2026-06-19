@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'Saul — Lead Prioritization Console',
-  description: 'Ranked lead queue for edtech sales floors',
+  title: 'Saul — Better Call Your Hottest Lead First',
+  description:
+    'A fit x intent lead-prioritization console for edtech sales floors. Ranked queue with explainable scoring, AI call-prep briefs, and multi-language outreach drafts.',
 };
 
 export default function RootLayout({

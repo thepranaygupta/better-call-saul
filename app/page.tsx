@@ -67,11 +67,11 @@ export default function LandingPage() {
 
         {/* Name + tagline */}
         <div className="text-center">
-          <h1 className="text-[20px] font-semibold tracking-tight text-stone-950">
-            Saul
+          <h1 className="text-[20px] font-semibold uppercase tracking-widest text-stone-950">
+            SAUL
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-stone-500">
-            Better call your hottest lead first.
+          <p className="mt-2 text-[11px] uppercase tracking-widest text-stone-400">
+            better call your hottest lead
           </p>
         </div>
 

@@ -60,6 +60,34 @@ export const createUserSchema = z.object({
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
+// --- Bulk lead import ---
+export const bulkLeadSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().email(),
+  phone: z.string().min(1).max(30),
+  projectId: z.string().min(1),
+  masterclassId: z.string().min(1),
+  occupationType: z.enum(['working_professional', 'student', 'other']),
+  jobTitle: z.string().max(200).optional(),
+  seniority: z.enum(['junior', 'mid', 'senior', 'unknown']).optional(),
+  city: z.string().max(200).optional(),
+  sourceChannel: z.enum([
+    'referral',
+    'email',
+    'paid_search',
+    'paid_social',
+    'organic',
+    'other',
+  ]),
+  isExistingCustomer: z.boolean().optional().default(false),
+});
+export type BulkLeadInput = z.infer<typeof bulkLeadSchema>;
+
+export const bulkLeadImportSchema = z.object({
+  leads: z.array(bulkLeadSchema).min(1).max(5000),
+});
+export type BulkLeadImportInput = z.infer<typeof bulkLeadImportSchema>;
+
 // --- Admin: Scoring config ---
 export const updateScoringConfigSchema = z.object({
   projectId: z.string().optional(),

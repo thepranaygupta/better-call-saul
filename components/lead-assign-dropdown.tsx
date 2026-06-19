@@ -43,8 +43,12 @@ export function LeadAssignDropdown({
 
     startTransition(async () => {
       try {
-        await assignLeadToBda({ leadId, bdaId });
-        onAssigned?.(bdaId, bdaName);
+        const result = await assignLeadToBda({ leadId, bdaId });
+        if (result.success) {
+          onAssigned?.(bdaId, bdaName);
+        } else {
+          setError(result.error ?? 'Assignment failed');
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Assignment failed');
       }

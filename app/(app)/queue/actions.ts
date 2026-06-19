@@ -365,7 +365,7 @@ export async function getBdasForProject(projectId: string): Promise<ProjectBda[]
 
 export async function assignLeadToBda(
   data: unknown,
-): Promise<{ success: boolean; assignedBdaId: string | null; assignedBdaName: string | null }> {
+): Promise<{ success: boolean; error?: string; assignedBdaId?: string | null; assignedBdaName?: string | null }> {
   const session = await requireRole('admin', 'sales_lead');
   const parsed = assignLeadSchema.parse(data);
 
@@ -374,7 +374,9 @@ export async function assignLeadToBda(
   // Verify lead is in the user's project scope
   const scoped = scopeLeadQueryToUser(session, { _id: parsed.leadId });
   const lead = await LeadModel.findOne(scoped as any).lean();
-  if (!lead) throw new Error('Lead not found or access denied');
+  if (!lead) {
+    return { success: false, error: 'Lead not found or access denied' };
+  }
 
   let assignedBdaName: string | null = null;
 
@@ -383,12 +385,13 @@ export async function assignLeadToBda(
     const bda = await UserModel.findOne({
       _id: parsed.bdaId,
       role: 'bda',
-      active: true,
       assignedProjectIds: lead.projectId,
     } as any)
       .select('_id name')
       .lean();
-    if (!bda) throw new Error('BDA not found or not assigned to this project');
+    if (!bda) {
+      return { success: false, error: 'BDA not found or not assigned to this project' };
+    }
     assignedBdaName = (bda as { name: string }).name;
   }
 
@@ -397,7 +400,7 @@ export async function assignLeadToBda(
     { assignedBdaId: parsed.bdaId ?? null },
   );
 
-  await logAudit(session.user.id, 'assign_lead', 'lead', parsed.leadId, {
+  void logAudit(session.user.id, 'assign_lead', 'lead', parsed.leadId, {
     bdaId: parsed.bdaId,
     bdaName: assignedBdaName,
     previousBdaId: lead.assignedBdaId ? String(lead.assignedBdaId) : null,
@@ -419,7 +422,7 @@ export async function assignLeadToBda(
 
 export async function bulkAssignLeads(
   data: unknown,
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; error?: string; count?: number }> {
   const session = await requireRole('admin', 'sales_lead');
   const parsed = bulkAssignLeadsSchema.parse(data);
 
@@ -433,9 +436,11 @@ export async function bulkAssignLeads(
     .select('_id projectId')
     .lean();
 
-  if (leads.length === 0) throw new Error('No leads found or access denied');
+  if (leads.length === 0) {
+    return { success: false, error: 'No leads found or access denied' };
+  }
   if (leads.length !== parsed.leadIds.length) {
-    throw new Error('Some leads not found or access denied');
+    return { success: false, error: 'Some leads not found or access denied' };
   }
 
   // Collect unique project IDs from the leads
@@ -446,18 +451,19 @@ export async function bulkAssignLeads(
     const bda = await UserModel.findOne({
       _id: parsed.bdaId,
       role: 'bda',
-      active: true,
     } as any)
       .select('_id name assignedProjectIds')
       .lean();
-    if (!bda) throw new Error('BDA not found');
+    if (!bda) {
+      return { success: false, error: 'BDA not found' };
+    }
 
     const bdaProjectIds = ((bda as { assignedProjectIds: { toString(): string }[] })
       .assignedProjectIds ?? []).map((id) => String(id));
 
     for (const pid of projectIds) {
       if (!bdaProjectIds.includes(pid)) {
-        throw new Error('BDA is not assigned to one or more lead projects');
+        return { success: false, error: 'BDA is not assigned to one or more lead projects' };
       }
     }
   }
@@ -468,9 +474,9 @@ export async function bulkAssignLeads(
     { assignedBdaId: parsed.bdaId ?? null },
   );
 
-  // Audit each assignment
+  // Audit -- fire and forget to avoid slowing down the response
   for (const leadId of parsed.leadIds) {
-    await logAudit(session.user.id, 'assign_lead', 'lead', leadId, {
+    void logAudit(session.user.id, 'assign_lead', 'lead', leadId, {
       bdaId: parsed.bdaId,
       bulk: true,
     });

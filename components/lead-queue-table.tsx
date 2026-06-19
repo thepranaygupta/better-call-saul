@@ -339,7 +339,12 @@ function RowAssignCell({
     setBdaName(newName);
     startTransition(async () => {
       try {
-        await assignLeadToBda({ leadId, bdaId: newBdaId });
+        const result = await assignLeadToBda({ leadId, bdaId: newBdaId });
+        if (!result.success) {
+          // Revert on failure
+          setBdaId(currentBdaId);
+          setBdaName(currentBdaName);
+        }
       } catch {
         // Revert on failure
         setBdaId(currentBdaId);

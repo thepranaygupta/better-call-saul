@@ -12,6 +12,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ProjectForm } from '@/components/admin/project-form';
 import { UserForm } from '@/components/admin/user-form';
+import { UserEditDialog } from '@/components/admin/user-edit-dialog';
+import { UserDeactivateButton } from '@/components/admin/user-deactivate-button';
 import { ProjectActiveToggle } from '@/components/admin/project-active-toggle';
 import type {
   SerializedProject,
@@ -174,14 +176,30 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                     <TableHead className="hidden text-[10px] font-semibold uppercase tracking-widest text-stone-500 lg:table-cell">
                       Created
                     </TableHead>
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user._id} className="border-stone-200">
+                    <TableRow
+                      key={user._id}
+                      className={`border-stone-200 ${user.active === false ? 'opacity-50' : ''}`}
+                    >
                       <TableCell>
-                        <div className="text-[13px] font-medium text-stone-950">
-                          {user.name}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[13px] font-medium text-stone-950">
+                            {user.name}
+                          </span>
+                          {user.active === false && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-stone-200 text-[9px] font-semibold uppercase tracking-widest text-stone-500"
+                            >
+                              Inactive
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-[11px] text-stone-500 sm:hidden">
                           {user.email}
@@ -212,7 +230,7 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                               return (
                                 <span
                                   key={pid}
-                                  className="inline-block rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600"
+                                  className="inline-block bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600"
                                 >
                                   {project?.name ?? pid}
                                 </span>
@@ -223,6 +241,12 @@ export function AdminPanel({ projects, users }: AdminPanelProps) {
                       </TableCell>
                       <TableCell className="hidden text-[12px] text-stone-500 lg:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <UserEditDialog user={user} projects={projects} />
+                          <UserDeactivateButton user={user} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

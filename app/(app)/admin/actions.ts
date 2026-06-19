@@ -16,6 +16,7 @@ import type { ILead } from '@/lib/db/models';
 import {
   createProjectSchema,
   createUserSchema,
+  updateUserSchema,
   updateScoringConfigSchema,
 } from '@/lib/validation/schemas';
 import { scoreLead } from '@/lib/scoring';
@@ -46,6 +47,7 @@ export interface SerializedUser {
   email: string;
   role: 'admin' | 'sales_lead' | 'bda';
   assignedProjectIds: string[];
+  active: boolean;
   createdAt: string;
 }
 
@@ -138,6 +140,81 @@ export async function createUser(
   await logAudit(session.user.id, 'create_user', 'user', String(newUser._id), {
     email: parsed.data.email,
     role: parsed.data.role,
+  });
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
+export async function updateUser(
+  userId: string,
+  data: unknown,
+): Promise<{ success: boolean; error?: string }> {
+  const session = await requireRole('admin');
+
+  if (!userId || typeof userId !== 'string') {
+    return { success: false, error: 'Invalid user ID' };
+  }
+
+  const parsed = updateUserSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  }
+
+  await connectDB();
+
+  const user = await (UserModel as any).findById(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  const changes: Record<string, unknown> = {};
+
+  if (parsed.data.role !== undefined) {
+    user.role = parsed.data.role;
+    changes.role = parsed.data.role;
+  }
+
+  if (parsed.data.assignedProjectIds !== undefined) {
+    user.assignedProjectIds = parsed.data.role === 'admin' ? [] : parsed.data.assignedProjectIds;
+    changes.assignedProjectIds = user.assignedProjectIds;
+  }
+
+  await user.save();
+
+  await logAudit(session.user.id, 'update_user', 'user', userId, changes);
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
+export async function deactivateUser(
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const session = await requireRole('admin');
+
+  if (!userId || typeof userId !== 'string') {
+    return { success: false, error: 'Invalid user ID' };
+  }
+
+  await connectDB();
+
+  const user = await (UserModel as any).findById(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Prevent deactivating yourself
+  if (String(user._id) === session.user.id) {
+    return { success: false, error: 'You cannot deactivate your own account' };
+  }
+
+  user.active = !user.active;
+  await user.save();
+
+  await logAudit(session.user.id, user.active ? 'reactivate_user' : 'deactivate_user', 'user', userId, {
+    email: user.email,
+    active: user.active,
   });
 
   revalidatePath('/admin');

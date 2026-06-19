@@ -57,7 +57,9 @@ export function AnalyticsFilters({ projects, sources }: AnalyticsFiltersProps) {
           onValueChange={(v: string | null) => updateFilter('project', v ?? 'all')}
         >
           <SelectTrigger id="analytics-project-filter" className="h-7 w-[160px] border-stone-200 bg-white text-[13px] text-stone-950">
-            <SelectValue placeholder="All projects" />
+            <SelectValue>
+              {currentProject === 'all' ? 'All projects' : projects.find(p => p._id === currentProject)?.name ?? 'All projects'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All projects</SelectItem>

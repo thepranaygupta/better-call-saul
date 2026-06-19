@@ -6,6 +6,7 @@ export interface IUser extends Document {
   passwordHash: string;
   role: 'admin' | 'sales_lead' | 'bda';
   assignedProjectIds: mongoose.Types.ObjectId[];
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +22,7 @@ const userSchema = new Schema<IUser>(
       required: true,
     },
     assignedProjectIds: [{ type: Schema.Types.ObjectId, ref: 'Project' }],
+    active: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

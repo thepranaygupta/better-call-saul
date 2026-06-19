@@ -60,6 +60,13 @@ export const createUserSchema = z.object({
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
+// --- Admin: Update user ---
+export const updateUserSchema = z.object({
+  role: z.enum(['admin', 'sales_lead', 'bda']).optional(),
+  assignedProjectIds: z.array(z.string()).optional(),
+});
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
 // --- Bulk lead import ---
 export const bulkLeadSchema = z.object({
   name: z.string().min(1).max(200),

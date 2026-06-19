@@ -401,7 +401,9 @@ export function CsvImport({ projects }: CsvImportProps) {
               onValueChange={handleProjectChange}
             >
               <SelectTrigger className="w-full text-[13px]">
-                <SelectValue placeholder="Select a project" />
+                <SelectValue>
+                  {selectedProject?.name ?? 'Select a project'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {projects
@@ -435,15 +437,10 @@ export function CsvImport({ projects }: CsvImportProps) {
               disabled={!selectedProjectId || loadingMasterclasses}
             >
               <SelectTrigger className="w-full text-[13px]">
-                <SelectValue
-                  placeholder={
-                    loadingMasterclasses
-                      ? 'Loading...'
-                      : !selectedProjectId
-                        ? 'Select a project first'
-                        : 'Select a masterclass'
-                  }
-                />
+                <SelectValue>
+                  {selectedMasterclass?.title
+                    ?? (loadingMasterclasses ? 'Loading...' : !selectedProjectId ? 'Select a project first' : 'Select a masterclass')}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {masterclasses.map((mc) => (

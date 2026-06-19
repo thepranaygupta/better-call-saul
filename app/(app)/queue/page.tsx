@@ -4,7 +4,7 @@ import { LeadQueueTable } from '@/components/lead-queue-table';
 import QueueLoading from './loading';
 
 export const metadata = {
-  title: 'Lead Queue — Saul',
+  title: 'Lead Queue | Saul',
 };
 
 async function QueueContent({
@@ -57,7 +57,7 @@ export default async function QueuePage({
       <div className="flex items-baseline gap-2">
         <h1 className="text-[20px] font-semibold text-stone-950">Lead Queue</h1>
         <p className="text-xs text-stone-500">
-          Ranked by fit and intent — call the top first.
+          Ranked by fit and intent · call the top first.
         </p>
       </div>
       <Suspense fallback={<QueueLoading />}>

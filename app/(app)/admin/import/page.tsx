@@ -3,7 +3,7 @@ import { getProjects } from '@/app/(app)/admin/actions';
 import { CsvImport } from '@/components/admin/csv-import';
 
 export const metadata = {
-  title: 'Import Leads — Saul',
+  title: 'Import Leads | Saul',
 };
 
 export default async function ImportPage() {

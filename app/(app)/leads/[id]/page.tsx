@@ -14,7 +14,7 @@ import { isAIAvailable } from '@/lib/ai/client';
 import LeadDetailLoading from './loading';
 
 export const metadata = {
-  title: 'Lead Detail — Saul',
+  title: 'Lead Detail | Saul',
 };
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import { CalibrationChart } from '@/components/calibration-chart';
 import { AnalyticsFilters } from '@/components/analytics-filters';
 
 export const metadata = {
-  title: 'Analytics — Saul',
+  title: 'Analytics | Saul',
 };
 
 async function FunnelSection({

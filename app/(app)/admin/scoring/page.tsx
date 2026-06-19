@@ -5,7 +5,7 @@ import {
 import { ScoringConfigEditor } from '@/components/admin/scoring-config-editor';
 
 export const metadata = {
-  title: 'Scoring Configuration — Saul',
+  title: 'Scoring Config | Saul',
 };
 
 export default async function ScoringConfigPage() {

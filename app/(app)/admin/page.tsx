@@ -5,7 +5,7 @@ import { AdminPanel } from '@/components/admin/admin-panel';
 import { UploadIcon, SlidersHorizontalIcon } from 'lucide-react';
 
 export const metadata = {
-  title: 'Admin — Saul',
+  title: 'Admin | Saul',
 };
 
 export default async function AdminPage() {

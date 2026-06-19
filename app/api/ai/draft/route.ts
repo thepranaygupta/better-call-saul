@@ -111,6 +111,7 @@ export async function POST(request: Request) {
   const systemPrompt = buildDraftSystemPrompt(channel, language);
   const userPrompt = buildDraftUserPrompt({
     leadName: lead.name as string,
+    senderName: session.user.name ?? 'Team',
     occupationType: lead.occupationType as string,
     jobTitle: lead.jobTitle as string | undefined,
     city: lead.city as string | undefined,

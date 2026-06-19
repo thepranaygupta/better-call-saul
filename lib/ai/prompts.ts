@@ -169,6 +169,7 @@ ${langInstruction}
 
 Write a personalized outreach message based on the lead's context.
 Reference their specific interests and engagement. Be genuine, not pushy.
+Sign off with the sender's actual name (provided in the user prompt), never use "[Your Name]" or placeholders.
 
 Return JSON: { "subject": "..." (email only — omit this key entirely for WhatsApp/SMS), "body": "..." }`;
 }
@@ -179,6 +180,7 @@ Return JSON: { "subject": "..." (email only — omit this key entirely for Whats
  */
 export function buildDraftUserPrompt(context: {
   leadName: string;
+  senderName: string;
   occupationType: string;
   jobTitle?: string;
   city?: string;
@@ -190,7 +192,8 @@ export function buildDraftUserPrompt(context: {
   signals: { signalType: string; polarity: string; evidenceQuote: string }[];
   recentDisposition?: { outcome: string; notes?: string };
 }): string {
-  return `Lead: ${context.leadName}
+  return `Sender (you): ${context.senderName}
+Lead: ${context.leadName}
 Occupation: ${context.occupationType}${context.jobTitle ? ` (${context.jobTitle})` : ''}${context.city ? ` from ${context.city}` : ''}
 Masterclass: ${context.masterclassTitle} | Offer: INR ${context.offerPriceINR.toLocaleString('en-IN')}
 Score: Fit ${context.fitScore}/100, Intent ${context.intentScore}/100 | Band: ${context.band}

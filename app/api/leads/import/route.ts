@@ -94,10 +94,10 @@ export async function POST(req: NextRequest) {
   const masterclassIds = [...new Set(leads.map((l) => l.masterclassId))];
 
   const [existingProjects, existingMasterclasses] = await Promise.all([
-    ProjectModel.find({ _id: { $in: projectIds } })
+    (ProjectModel as any).find({ _id: { $in: projectIds } })
       .select('_id')
       .lean(),
-    MasterclassModel.find({ _id: { $in: masterclassIds } })
+    (MasterclassModel as any).find({ _id: { $in: masterclassIds } })
       .select('_id projectId pitchStartMinute durationMinutes')
       .lean(),
   ]);

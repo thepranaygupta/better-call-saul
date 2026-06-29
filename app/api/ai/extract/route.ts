@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
   // ---- Branch: transcript extraction vs chat extraction ----
   if (transcriptId) {
-    return handleTranscriptExtraction(leadId, transcriptId);
+    return handleTranscriptExtraction(leadId, transcriptId, session.user.id);
   }
 
   return handleChatExtraction(leadId);
@@ -183,6 +183,7 @@ async function handleChatExtraction(leadId: string) {
 async function handleTranscriptExtraction(
   leadId: string,
   transcriptId: string,
+  userId: string,
 ) {
   // Load the transcript document
   const transcript = await (CallTranscriptModel as any)
@@ -256,7 +257,7 @@ async function handleTranscriptExtraction(
 
   // Auto-rescore the lead so the new signals are reflected immediately
   try {
-    await rescoreLeadCore(leadId, session.user.id);
+    await rescoreLeadCore(leadId, userId);
   } catch (err) {
     // Rescoring failure is non-fatal; signals were saved successfully.
     // The lead will be rescored on next view via the stale-snapshot check.

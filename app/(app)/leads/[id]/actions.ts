@@ -12,6 +12,7 @@ import {
   ScoringConfigModel,
   ProjectModel,
   UserModel,
+  CallTranscriptModel,
   type IActivity,
   type IExtractedSignal,
   type IDisposition,
@@ -515,4 +516,48 @@ export async function rescoreLead(
     fitScore: result.fitScore,
     intentScore: result.intentScore,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Transcript types + getTranscripts
+// ---------------------------------------------------------------------------
+
+export interface TranscriptData {
+  _id: string;
+  bdaName: string;
+  turns: { speaker: 'agent' | 'customer'; text: string }[];
+  language?: string;
+  extractedSignalIds: string[];
+  createdAt: string;
+}
+
+export async function getTranscripts(leadId: string): Promise<TranscriptData[]> {
+  const session = await requireAuth();
+  await connectDB();
+
+  // RBAC: verify the caller can see this lead
+  const scoped = scopeLeadQueryToUser(session, { _id: leadId });
+  const lead = await LeadModel.findOne(scoped as any).select('_id').lean();
+  if (!lead) return [];
+
+  const transcripts = await (CallTranscriptModel as any)
+    .find({ leadId })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Resolve BDA names in one query
+  const bdaIds = [...new Set(transcripts.map((t: Record<string, unknown>) => String(t.bdaId)))];
+  const bdas = bdaIds.length > 0
+    ? await UserModel.find({ _id: { $in: bdaIds } } as any).select('_id name').lean()
+    : [];
+  const bdaMap = new Map((bdas as Array<{ _id: unknown; name: string }>).map((b) => [String(b._id), b.name]));
+
+  return transcripts.map((t: Record<string, unknown>) => ({
+    _id: String(t._id),
+    bdaName: bdaMap.get(String(t.bdaId)) ?? 'Unknown',
+    turns: t.turns as { speaker: 'agent' | 'customer'; text: string }[],
+    language: t.language as string | undefined,
+    extractedSignalIds: ((t.extractedSignalIds as unknown[]) ?? []).map(String),
+    createdAt: (t.createdAt as Date).toISOString(),
+  }));
 }

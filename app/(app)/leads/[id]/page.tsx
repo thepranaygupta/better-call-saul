@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getLeadDetail } from './actions';
+import { getLeadDetail, getTranscripts } from './actions';
 import { ScoreBreakdown } from '@/components/score-breakdown';
 import { CallBriefPanel } from '@/components/call-brief-panel';
 import { MessageDraftPanel } from '@/components/message-draft-panel';
@@ -10,6 +10,7 @@ import type { Band } from '@/components/band-badge';
 import { RecentLeadTracker } from '@/components/recent-lead-tracker';
 import { LeadDetailAssign } from '@/components/lead-detail-assign';
 import { ExtractRescoreButton } from '@/components/extract-rescore-button';
+import { CallTranscriptSection } from '@/components/call-transcript-section';
 import { ChevronLeftIcon } from 'lucide-react';
 import { isAIAvailable } from '@/lib/ai/client';
 import LeadDetailLoading from './loading';
@@ -138,6 +139,9 @@ async function LeadDetailContent({ id }: { id: string }) {
   const canAssign = currentUserRole === 'admin' || currentUserRole === 'sales_lead';
   const hasChatMessages = activities.some((a) => a.type === 'chat_message' && a.text);
 
+  // Fetch transcripts for this lead
+  const transcripts = await getTranscripts(id);
+
   return (
     <>
       {/* Track this lead visit in localStorage for sidebar "Recent" */}
@@ -183,6 +187,12 @@ async function LeadDetailContent({ id }: { id: string }) {
           <ExtractRescoreButton
             leadId={id}
             hasChatMessages={hasChatMessages}
+            aiAvailable={aiReady}
+          />
+
+          <CallTranscriptSection
+            leadId={id}
+            transcripts={transcripts}
             aiAvailable={aiReady}
           />
 

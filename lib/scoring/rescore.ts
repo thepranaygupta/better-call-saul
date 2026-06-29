@@ -27,7 +27,7 @@ export async function rescoreLeadCore(
 ): Promise<RescoreResult | { success: false; error: string }> {
   await connectDB();
 
-  const lead = await LeadModel.findById(leadId).lean();
+  const lead = await (LeadModel as any).findById(leadId).lean();
   if (!lead) return { success: false, error: 'Lead not found' };
 
   const leadIdStr = String(lead._id);

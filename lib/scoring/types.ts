@@ -42,6 +42,7 @@ export type ActivityType =
   | 'unsubscribed';
 
 export type SignalType =
+  // Chat/Q&A signals (original 10)
   | 'asked_emi'
   | 'asked_price'
   | 'asked_job_outcome'
@@ -51,7 +52,32 @@ export type SignalType =
   | 'price_objection'
   | 'high_enthusiasm'
   | 'competitor_mention'
-  | 'not_interested';
+  | 'not_interested'
+  // Call-specific: strong positive
+  | 'ready_to_enroll_verbally'
+  | 'agreed_to_callback'
+  | 'requested_demo'
+  | 'asked_enrollment_process'
+  | 'mentioned_budget_available'
+  | 'referral_intent'
+  // Call-specific: engagement
+  | 'asked_curriculum_details'
+  | 'asked_instructor_credentials'
+  | 'asked_batch_timing'
+  | 'shared_personal_goals'
+  | 'positive_past_experience'
+  // Call-specific: neutral
+  | 'spouse_approval_needed'
+  | 'comparing_alternatives'
+  | 'asked_certificate_value'
+  | 'time_constraint_mentioned'
+  | 'employer_sponsorship_query'
+  // Call-specific: negative
+  | 'call_back_later_stall'
+  | 'not_the_decision_maker'
+  | 'expressed_distrust'
+  | 'explicit_rejection'
+  | 'wrong_timing';
 
 // ---------------------------------------------------------------------------
 // Scoring inputs — plain-object projections the caller builds from DB docs

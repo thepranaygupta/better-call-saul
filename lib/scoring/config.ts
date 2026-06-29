@@ -53,6 +53,31 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     not_interested: -30,
     asked_time_commitment: 10,
     asked_refund_guarantee: 10,
+    // Call-specific: strong positive
+    ready_to_enroll_verbally: 18,
+    requested_demo: 14,
+    agreed_to_callback: 12,
+    asked_enrollment_process: 14,
+    mentioned_budget_available: 10,
+    referral_intent: 10,
+    // Call-specific: engagement
+    asked_curriculum_details: 8,
+    asked_instructor_credentials: 6,
+    asked_batch_timing: 8,
+    shared_personal_goals: 6,
+    positive_past_experience: 8,
+    // Call-specific: neutral
+    spouse_approval_needed: 3,
+    comparing_alternatives: 4,
+    asked_certificate_value: 6,
+    time_constraint_mentioned: 2,
+    employer_sponsorship_query: 8,
+    // Call-specific: negative
+    call_back_later_stall: -4,
+    not_the_decision_maker: -2,
+    expressed_distrust: -8,
+    explicit_rejection: -15,
+    wrong_timing: -3,
   },
 
   decayHalfLifeDays: 7,

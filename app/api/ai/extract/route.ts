@@ -17,12 +17,14 @@ import {
   CALL_EXTRACTION_SYSTEM_PROMPT,
   buildCallExtractionUserPrompt,
 } from '@/lib/ai/prompts';
-import { rescoreLead } from '@/app/(app)/leads/[id]/actions';
+import { rescoreLeadCore } from '@/lib/scoring/rescore';
 
 /** Zod schema for the request body — validates + sanitises input at the boundary. */
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+
 const requestBodySchema = z.object({
-  leadId: z.string().min(1, 'leadId is required'),
-  transcriptId: z.string().optional(),
+  leadId: z.string().regex(objectIdRegex, 'Invalid leadId format'),
+  transcriptId: z.string().regex(objectIdRegex, 'Invalid transcriptId format').optional(),
 });
 
 /**
@@ -237,7 +239,7 @@ async function handleTranscriptExtraction(
 
   // Auto-rescore the lead so the new signals are reflected immediately
   try {
-    await rescoreLead(leadId);
+    await rescoreLeadCore(leadId, session.user.id);
   } catch (err) {
     // Rescoring failure is non-fatal; signals were saved successfully.
     // The lead will be rescored on next view via the stale-snapshot check.

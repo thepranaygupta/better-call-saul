@@ -236,6 +236,11 @@ function ImportForm({
         return;
       }
 
+      if (file.size > 100_000) {
+        setErrorMsg('File too large (max 100KB)');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (evt) => {
         const content = evt.target?.result;

@@ -82,7 +82,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 
   decayHalfLifeDays: 7,
 
-  disqualifiers: ['student_email_domain', 'unsubscribed', 'not_interested'],
+  disqualifiers: ['student_email_domain', 'unsubscribed', 'not_interested', 'explicit_rejection'],
 
   thresholds: {
     hot: 60,

@@ -109,6 +109,14 @@ export const bulkAssignLeadsSchema = z.object({
 });
 export type BulkAssignLeadsInput = z.infer<typeof bulkAssignLeadsSchema>;
 
+// --- Transcript import ---
+export const importTranscriptSchema = z.object({
+  leadId: z.string().min(1),
+  text: z.string().min(10).max(50000),
+  language: z.string().max(20).optional(),
+});
+export type ImportTranscriptInput = z.infer<typeof importTranscriptSchema>;
+
 // --- Admin: Scoring config ---
 export const updateScoringConfigSchema = z.object({
   projectId: z.string().optional(),

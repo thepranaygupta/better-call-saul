@@ -13,7 +13,8 @@ export interface IActivity extends Document {
     | 'poll_response'
     | 'clicked_offer'
     | 'reregistered'
-    | 'unsubscribed';
+    | 'unsubscribed'
+    | 'call_transcript_added';
   numericValue?: number;
   text?: string;
   occurredAt: Date;
@@ -43,6 +44,7 @@ const activitySchema = new Schema<IActivity>(
         'clicked_offer',
         'reregistered',
         'unsubscribed',
+        'call_transcript_added',
       ],
       required: true,
     },

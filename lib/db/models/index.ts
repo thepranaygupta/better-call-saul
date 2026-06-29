@@ -33,3 +33,6 @@ export type { IMessageDraft } from './message-draft';
 
 export { AuditLogModel } from './audit-log';
 export type { IAuditLog } from './audit-log';
+
+export { CallTranscriptModel } from './call-transcript';
+export type { ICallTranscript } from './call-transcript';

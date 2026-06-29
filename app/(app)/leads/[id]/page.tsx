@@ -192,6 +192,7 @@ async function LeadDetailContent({ id }: { id: string }) {
 
           <CallTranscriptSection
             leadId={id}
+            leadName={lead.name}
             transcripts={transcripts}
             aiAvailable={aiReady}
           />

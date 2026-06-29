@@ -20,6 +20,7 @@ import type { TranscriptData } from '@/app/(app)/leads/[id]/actions';
 
 interface CallTranscriptSectionProps {
   leadId: string;
+  leadName: string;
   transcripts: TranscriptData[];
   aiAvailable: boolean;
 }
@@ -142,13 +143,13 @@ function TranscriptCard({
         {visibleTurns.map((turn, i) => (
           <div key={i} className="flex gap-2">
             <span
-              className={`shrink-0 w-[52px] text-[10px] font-semibold uppercase tracking-widest pt-0.5 ${
+              className={`shrink-0 w-[64px] text-[10px] font-semibold uppercase tracking-widest pt-0.5 ${
                 turn.speaker === 'agent'
                   ? 'text-stone-400'
                   : 'text-amber-700'
               }`}
             >
-              {turn.speaker === 'agent' ? 'Agent' : 'Lead'}
+              {turn.speaker === 'agent' ? transcript.bdaName.split(' ')[0] : leadName.split(' ')[0]}
             </span>
             <p
               className={`text-[13px] leading-relaxed ${
@@ -393,6 +394,7 @@ function ImportForm({
 
 export function CallTranscriptSection({
   leadId,
+  leadName,
   transcripts: initialTranscripts,
   aiAvailable,
 }: CallTranscriptSectionProps) {

@@ -1,0 +1,19 @@
+Agent: Hi, am I speaking with Aarav?
+Customer: Yes, this is Aarav. Who's calling?
+Agent: Hey Aarav, this is Rahul from Be10X. You attended our AI Tools Masterclass yesterday, right? Just wanted to check how you found the session.
+Customer: Oh yeah, that was brilliant actually. I stayed till the very end. The part about using AI agents for automating reports blew my mind.
+Agent: Glad you liked it! So what kind of work do you do currently?
+Customer: I'm a business analyst at Infosys. Been there about four years. I spend half my day pulling data from different dashboards and making slides. It's mind-numbing honestly.
+Agent: Ah, so exactly the kind of stuff our course automates. Did you get a chance to see the demo where we built a full report pipeline in under ten minutes?
+Customer: Yes! That's the part I was telling my manager about this morning. He was like, "find out how much it costs, we need this yesterday." So what's the pricing looking like?
+Agent: Nice, love that your manager's already on board. So the full program is 14,999 including GST. It's a 6-week intensive with live weekend sessions, assignments, and lifetime access to the recordings.
+Customer: 14,999 is actually pretty reasonable for what you showed. When does the next batch start?
+Agent: We've got one kicking off this Saturday. Early bird slots are filling up though. There's also a weekday evening batch starting next Wednesday if that works better.
+Customer: Saturday works perfectly for me. Weekends are when I have the most energy for learning anyway.
+Agent: Great choice. And just so you know, we also have a no-cost EMI option if you'd rather spread the payment. Three months, no interest.
+Customer: Nah, I'll pay the full amount upfront. Can you send me the payment link on WhatsApp? I want to lock in my spot before the Saturday batch fills up.
+Agent: Absolutely, sending it right now. You'll get a confirmation email within five minutes of payment. Also, you'll be added to our private community group where alumni share templates and job leads.
+Customer: Perfect. One more thing though, do you guys give a certificate? My company reimburses training costs if there's a certificate involved.
+Agent: Yes, you get a verified completion certificate. A lot of our learners use it for employer reimbursement actually.
+Customer: Brilliant. Alright Rahul, send that link. I'm enrolling today.
+Agent: Done! Check your WhatsApp. Welcome aboard, Aarav. You're going to love the Saturday sessions.

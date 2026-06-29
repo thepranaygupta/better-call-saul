@@ -1,0 +1,10 @@
+Agent: Hello, ami ki Debashis babu-r sathe kotha bolchi?
+Customer: Hyan, ke bolchen?
+Agent: Debashis babu, ami Rahul bolchi Be10X theke. Apni amader AI Tools Masterclass-e register korechilen. Session ta kemon laglo?
+Customer: Dekhun, ami bhul kore register kore felechi. Amar ai sob lage na.
+Agent: Achha, kono problem nei. Jodi ektu boli, ki laglo na specifically?
+Customer: Ami ekta sorkari office-e kaj kori. Amader sob kichu manual. AI toh amader department-e use hobei na. Tai ete taka khoroch kore ki hobe?
+Agent: Bujhte parchi. But AI tools to just software companies-r jonno na, government sector-eo lok automation korche aajkal.
+Customer: Na na, amake abar call korben na please. Amar interest nei. Amar boss-o ei sob maanbe na.
+Agent: Theek achhe Debashis babu, ami apnake aur disturb korbo na. Jodi future-e kabhu mind change hoy, amader website-e details achhe.
+Customer: Hmm theek achhe. Bye.

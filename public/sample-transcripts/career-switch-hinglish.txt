@@ -1,0 +1,20 @@
+Agent: Hey Vikram, Neha here from Office Master. You registered for our Excel Mastery session, right?
+Customer: Yeah yeah, dekhi thi. But honestly mera interest Excel mein nahi hai exactly.
+Agent: Oh okay, toh kya interested hai aapko?
+Customer: Actually main marketing mein hoon last 5 years se. Agency side. But ab mujhe data analytics mein switch karna hai. Like proper career change.
+Agent: Oh interesting. Kya trigger kiya yeh decision?
+Customer: Bhai salary stagnant hai. Meri team mein jo data analysts hain, unki salary mere se double hai for same experience level. Aur marketing mein growth ceiling aa gayi hai.
+Agent: Makes sense. Toh aapko basically analytical skills chahiye, not just Excel formulas.
+Customer: Exactly! Mujhe SQL, Python basics, aur data visualization seekhna hai. Excel toh already aata hai mujhe decent level pe. I need something more substantial.
+Agent: Got it. Toh humara Advanced Analytics track would be better for you actually. It covers Power Query, SQL fundamentals, and basic Python for data work. 3-month program hai.
+Customer: Kitna hai fees?
+Agent: 6,999 for the full thing. Weekend batches hain, so job ke saath manage ho jayega.
+Customer: Hmm that's not bad. But mera ek concern hai. Main marketing background se hoon, toh kya mujhe samajh aayega? Ya fir yeh sab engineers ke liye hai?
+Agent: Nahi yaar, bilkul nahi. Humari last batch mein 40% non-tech background se the. Ek HR manager thi, ek CA tha, ek teacher tha. Sab ne complete kiya. Content zero-to-one se start hota hai.
+Customer: Achha yeh sunke relief mila. Aur completion ke baad kya hota hai? Like placement milti hai?
+Agent: Placement guarantee toh nahi dete hum, that would be dishonest. But hamare alumni network mein companies post karti hain openings. Plus humara certificate LinkedIn pe achha dikhta hai. Last batch se 6 logon ne switch kiya successfully.
+Customer: 6 out of kitne?
+Agent: Batch size 35 thi. But sab ka goal career switch nahi tha obviously. Jo seriously lage the unke results achhe aaye.
+Customer: Fair enough. Ek kaam karo, mujhe ek do din sochne do. I'll compare with a couple of other options bhi. Coursera pe bhi kuch dekh raha tha.
+Agent: Sure, take your time. Main kal ek comparison doc bhej dunga jo Coursera aur hamare track ka side-by-side dikhata hai. Fair comparison, no sales pitch.
+Customer: Haan that would be helpful actually. Send kar do.

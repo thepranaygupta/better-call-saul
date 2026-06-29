@@ -1,0 +1,16 @@
+Agent: Hello, kya main Sunita ji se baat kar raha hoon?
+Customer: Haan, bol rahi hoon. Kaun hai?
+Agent: Sunita ji, main Rahul bol raha hoon Be10X se. Aapne kal hamari AI Masterclass attend ki thi, toh bas aapka feedback lena tha.
+Customer: Haan dekhi thi, achhi thi. Lekin yeh jo course bata rahe the wo bahut mehenga hai.
+Agent: Samajh sakta hoon. Kitna budget tha aapka roughly?
+Customer: Dekho, 15,000 ek baar mein dena mushkil hai mere liye. Main government school mein teacher hoon. Salary utni zyada nahi hoti.
+Agent: Bilkul samajhta hoon Sunita ji. Isliye humne EMI ka option rakha hai. Aap 3 mahine mein pay kar sakti hain, per month lagbhag 5,000 aata hai. Aur koi interest nahi lagta.
+Customer: 5,000 per month? Hmm, wo toh thoda manage ho sakta hai. Lekin mujhe confirm karna padega. Mere husband se baat karni hogi pehle.
+Agent: Bilkul, zaroor baat kariye. Main ek brochure bhej deta hoon WhatsApp pe jisme sara detail hai, fees, curriculum, schedule, sab kuch.
+Customer: Haan bhej do. Ek aur baat, agar mujhe course start karne ke baad lagta hai ki yeh mere kaam ka nahi hai, toh kya refund milega?
+Agent: Ji haan, humari 7-day refund policy hai. Agar first week mein lagta hai ki course fit nahi hai toh full refund milta hai, koi sawaal nahi.
+Customer: Achha yeh toh achhi baat hai. Aur batao, yeh course karne ke baad kya fayda hoga mujhe practically? Main toh teacher hoon, AI se kya karungi?
+Agent: Bahut achha sawaal hai. Humari pichhli batch mein 3 teachers the. Unhone apna lesson planning, question paper generation, student assessment sab automate kar liya. Ek teacher ne toh side mein freelance content writing bhi shuru ki AI tools se.
+Customer: Sach mein? Yeh toh interesting hai. Mujhe bhi side income chahiye actually.
+Agent: Toh aap sochiye, husband se baat kariye, aur kal tak bata dijiye. Main kal shaam ko 6 baje call karun?
+Customer: Haan theek hai, kal 6 baje call karna. Tab tak main decide kar lungi.

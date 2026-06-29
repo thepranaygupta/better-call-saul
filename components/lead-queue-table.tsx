@@ -298,7 +298,7 @@ function FilterPill({ label, value, options, onChange }: FilterPillProps) {
             : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300 hover:text-stone-700',
         )}
       >
-        <SelectValue>{selectedLabel}</SelectValue>
+        <span className="flex flex-1 text-left">{selectedLabel}</span>
       </SelectTrigger>
       <SelectContent align="start" sideOffset={4}>
         <SelectItem value="all" className="text-xs">

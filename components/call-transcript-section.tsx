@@ -44,10 +44,12 @@ type ExtractPhase = 'idle' | 'extracting' | 'done' | 'error';
 function TranscriptCard({
   transcript,
   leadId,
+  leadName,
   aiAvailable,
 }: {
   transcript: TranscriptData;
   leadId: string;
+  leadName: string;
   aiAvailable: boolean;
 }) {
   const router = useRouter();
@@ -439,6 +441,7 @@ export function CallTranscriptSection({
                 key={t._id}
                 transcript={t}
                 leadId={leadId}
+                leadName={leadName}
                 aiAvailable={aiAvailable}
               />
             ))}

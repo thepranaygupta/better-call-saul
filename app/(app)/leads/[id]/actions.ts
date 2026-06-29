@@ -555,7 +555,7 @@ export async function getTranscripts(leadId: string): Promise<TranscriptData[]> 
   return transcripts.map((t: Record<string, unknown>) => ({
     _id: String(t._id),
     bdaName: bdaMap.get(String(t.bdaId)) ?? 'Unknown',
-    turns: t.turns as { speaker: 'agent' | 'customer'; text: string }[],
+    turns: (t.turns as { speaker: string; text: string; _id?: unknown }[]).map(({ speaker, text }) => ({ speaker: speaker as 'agent' | 'customer', text })),
     language: t.language as string | undefined,
     extractedSignalIds: ((t.extractedSignalIds as unknown[]) ?? []).map(String),
     createdAt: (t.createdAt as Date).toISOString(),

@@ -91,6 +91,25 @@ Lead chat/Q&A is untrusted user-generated text. A lead could write *"ignore prev
 
 The seed data includes an injection-attempt message to demonstrate this guard in action.
 
+### Call transcript analysis
+
+The chat extraction pipeline handles pre-call signals: Q&A and chat messages from the masterclass. But the richest buying signals often surface *during* the BDA's follow-up call. Call transcript analysis extends the same extract-then-score pipeline to post-call conversations.
+
+**How it works.** A BDA pastes (or uploads a `.txt` file of) a call transcript on the lead detail page. The transcript parser normalizes speaker labels (`Agent`/`BDA`/`Rep` to agent; `Customer`/`Lead`/`Prospect`/`Client` to customer) and handles multiline turns. The import route (`POST /api/transcripts/import`) validates, parses, stores the structured turns as a `CallTranscript` document, and logs a `call_transcript_added` activity. The BDA then clicks "Extract Signals" to run the call-specific extraction prompt against Azure OpenAI. Extracted signals are linked to the transcript and auto-rescore the lead immediately.
+
+**20 new call-specific signal types**, grouped by buying intent:
+
+- **Strong positive** (high-weight): `ready_to_enroll_verbally`, `agreed_to_callback`, `requested_demo`, `asked_enrollment_process`, `mentioned_budget_available`, `referral_intent`
+- **Engagement** (moderate-weight): `asked_curriculum_details`, `asked_instructor_credentials`, `asked_batch_timing`, `shared_personal_goals`, `positive_past_experience`
+- **Neutral** (low-weight context signals): `spouse_approval_needed`, `comparing_alternatives`, `asked_certificate_value`, `time_constraint_mentioned`, `employer_sponsorship_query`
+- **Negative** (score penalties): `call_back_later_stall`, `not_the_decision_maker`, `expressed_distrust`, `explicit_rejection`, `wrong_timing`
+
+These join the existing 10 chat-derived signal types for a total of 30 signal types across both pipelines, all validated against the same Zod enum schema.
+
+**Multilingual by design.** The extraction prompt instructs the model to extract signals regardless of language. Transcripts in English, Hindi, Hinglish, Bengali, or any other language all flow through the same pipeline with no language-specific branching. The seed includes transcripts in English, Hindi, and Hinglish.
+
+**Same scoring engine, zero changes.** Transcript signals feed into `scoreLead()` exactly like chat signals. The scoring function remains pure: it takes signals in, produces scores and contributions out. Call-specific signal types simply have their own configured weights in `intentWeights`.
+
 ---
 
 ## Architecture
@@ -104,6 +123,7 @@ The seed data includes an injection-attempt message to demonstrate this guard in
     /analytics               # Funnel + calibration charts (PPR)
     /admin                   # Projects, users, versioned scoring weights
   /api/ai                    # extract / brief / draft (rate-limited)
+  /api/transcripts/import    # call transcript import (parse + store + activity log)
 
 /lib
   /scoring                   # Pure scoring engine (no I/O, no LLM, no DB)
@@ -112,6 +132,8 @@ The seed data includes an injection-attempt message to demonstrate this guard in
   /auth                      # Auth.js config + RBAC helpers
   /validation                # Zod schemas for all inputs
 ```
+
+**Models:** `Lead`, `Activity`, `ExtractedSignal`, `ScoreSnapshot`, `Disposition`, `CallBrief`, `MessageDraft`, `Masterclass`, `Project`, `User`, `ScoringConfig`, `AuditLog`, and `CallTranscript` (stores parsed conversation turns with linked extracted signals).
 
 **Key constraint:** `lib/scoring` imports nothing from the DB or AI layers. Scoring is a pure function of `(lead, activities, extractedSignals, config)`, deterministic, idempotent, and heavily unit-tested. This makes it trivially testable and safe to move to a background worker at scale.
 
@@ -184,6 +206,7 @@ pnpm setup        # db + seed in one step
 - **~200 leads** with realistic distributions: ~35% attended live, varied watch percentages, ~5-15% enrolled outcomes, mixed source channels, working professionals and students, some disqualifiers
 - **Realistic Q&A/chat text** on many leads: questions about EMI/payment plans, pricing, career outcomes, time commitment, refund policy; enthusiastic and disinterested messages; and at least one prompt-injection attempt
 - **4 demo users** with different roles and project scopes (see Demo Credentials above)
+- **9 call transcripts** across English, Hindi, and Hinglish: 5 with pre-extracted signals (visible immediately on lead detail), 4 awaiting live extraction (click "Extract Signals" to demo the pipeline). Sample `.txt` files in `public/sample-transcripts/` for paste/upload testing
 - **Scoring config** with default weights, decay half-life, and disqualifier list
 
 ---

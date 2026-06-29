@@ -151,8 +151,17 @@ async function handleChatExtraction(leadId: string) {
     return NextResponse.json({ signals: [] });
   }
 
+  // Dedup: skip signal types already extracted for this lead
+  const existingTypes = await (ExtractedSignalModel as any).distinct('signalType', { leadId });
+  const existingSet = new Set(existingTypes as string[]);
+  const newSignals = result.signals.filter((s) => !existingSet.has(s.signalType));
+
+  if (newSignals.length === 0) {
+    return NextResponse.json({ signals: [], skipped: result.signals.length });
+  }
+
   const savedSignals = await ExtractedSignalModel.insertMany(
-    result.signals.map((s) => ({
+    newSignals.map((s) => ({
       leadId,
       sourceActivityIds: activityIds,
       signalType: s.signalType,
@@ -164,7 +173,7 @@ async function handleChatExtraction(leadId: string) {
     })) as any,
   );
 
-  return NextResponse.json({ signals: savedSignals });
+  return NextResponse.json({ signals: savedSignals, skipped: result.signals.length - newSignals.length });
 }
 
 // ---------------------------------------------------------------------------
@@ -215,9 +224,17 @@ async function handleTranscriptExtraction(
     return NextResponse.json({ signals: [] });
   }
 
-  // Persist extracted signals
+  // Dedup: skip signal types already extracted for this lead
+  const existingTypes = await (ExtractedSignalModel as any).distinct('signalType', { leadId });
+  const existingSet = new Set(existingTypes as string[]);
+  const newSignals = result.signals.filter((s) => !existingSet.has(s.signalType));
+
+  if (newSignals.length === 0) {
+    return NextResponse.json({ signals: [], skipped: result.signals.length });
+  }
+
   const savedSignals = await ExtractedSignalModel.insertMany(
-    result.signals.map((s) => ({
+    newSignals.map((s) => ({
       leadId,
       sourceActivityIds: [],
       signalType: s.signalType,

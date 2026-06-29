@@ -285,7 +285,18 @@ function computeIntent(
   }
 
   // --- Extracted signals (from LLM) ---
+  // Deduplicate: keep only the highest-confidence instance of each signal type.
+  // Multiple extractions (chat + transcript) can produce the same signal type;
+  // stacking them inflates the score.
+  const bestSignals = new Map<string, typeof signals[number]>();
   for (const signal of signals) {
+    const existing = bestSignals.get(signal.signalType);
+    if (!existing || signal.confidence > existing.confidence) {
+      bestSignals.set(signal.signalType, signal);
+    }
+  }
+
+  for (const signal of bestSignals.values()) {
     const baseWeight = intentWeights[signal.signalType] ?? 0;
     if (baseWeight === 0) continue;
 
